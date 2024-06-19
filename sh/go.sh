@@ -32,7 +32,7 @@ python /home/dsfsb/workarea/python/run_mpu9250.py > /home/dsfsb/workarea/log/dat
 python /home/dsfsb/workarea/python/run_mpu6050.py > /home/dsfsb/workarea/log/data_${FNAME}/mpu6050.log &
 
 #start move
-sh /home/dsfsb/workarea/sh/get_move.sh ${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/get_move.log
+sh /home/dsfsb/workarea/sh/get_move.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/get_move.log
 
 # #start timelapse 
 # sh /home/dsfsb/workarea/sh/timelapse.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/timelapse.log &
