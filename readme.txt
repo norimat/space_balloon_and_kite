@@ -30,6 +30,7 @@ space_balloon_and_kite:.
 │          test2_L80_M39.py ：L80_M39で受信したGPS受信データ出力スクリプト(受信せず)    参照先https://wiki.52pi.com/index.php/USB-Port-GPS_Module_SKU:EZ-0048
 │
 └─sh                        ：シェルスクリプトの格納ディレクトリ
+        exe_script.sh        : Cronで自動起動しないpythonコマンドへの対応                                               参照先https://qiita.com/Yokohide/items/b4ddc81372501668aa9c
 　      get_still.sh         ：Raspberry Pi Zero用スパイカメラでの撮影実行スクリプト                                   　参照先https://qiita.com/ikemura23/items/4f949d47489e6c5ff6a2
 　      go.sh                ：RaspberryPiZero起動直後にデータ格納ディレクトリ作成と各種測定用スクリプトを実行するスクリプト
 　      run_gpxlogger.sh     ：GPS受信を開始するスクリプト                                                              参照先https://denor.jp/raspberry-pi%E3%81%AB%E3%80%8C%E3%81%BF%E3%81%A1%E3%81%B3%E3%81%8D%E3%80%8D%E5%AF%BE%E5%BF%9Cgps%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E3%82%92%E6%8E%A5%E7%B6%9A
