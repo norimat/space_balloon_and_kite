@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #システムが準備ができるまで少し待つ。
-sleep 10
+sleep 60
 
 echo 0 > count
 
@@ -35,16 +35,17 @@ done
 /usr/bin/python /home/dsfsb/workarea/python/run_mpu6050.py > /home/dsfsb/workarea/log/data_${FNAME}/mpu6050.log &
 
 #start move
-# sh /home/dsfsb/workarea/sh/get_move.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/get_move.log
+sh /home/dsfsb/workarea/sh/get_move.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/get_move.log &
 
 #start still
-sh /home/dsfsb/workarea/sh/get_still.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/get_still.log
+# sh /home/dsfsb/workarea/sh/get_still.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/get_still.log &
 
 # #start timelapse 
 # sh /home/dsfsb/workarea/sh/timelapse.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/timelapse.log &
 
-# #start gps logger
+#start gps logger
 # sh /home/dsfsb/workarea/sh/run_gpxlogger.sh data_${FNAME} &
+/usr/bin/gpxlogger -f /home/dsfsb/workarea/log/data_${FNAME}/gpslog.gpx &
 
 # #start gpsmon
 # gpsmon

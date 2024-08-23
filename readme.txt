@@ -1,4 +1,4 @@
-Last Update 2021.1.3
+ast Update 2024.8.23
 
 space_balloon_and_kite:.
 |
@@ -17,7 +17,8 @@ space_balloon_and_kite:.
 ├─python                    ：pythonスクリプトの格納ディレクトリ
 │  │  run_bme280.py         ：BME-280の測定用スクリプト         参照先https://qiita.com/_saki_kawa_/items/7961c82b150a01920d72
 │  │  run_mpu6050.py        ：MPU-6050の測定用スクリプト        参照先http://manabi.science/library/2017/02121501/
-│  │  run_mpu9250.py        ：MPU-9250の測定用スクリプト        参照先https://qiita.com/boyaki_machine/items/915f7730c737f2a5cc79
+│  │  run_mpu9250.py        ：MPU-9250の測定用スクリプト        参照先https://modalsoul.hatenablog.com/entry/2018/10/07/222242
+│  │                                                          　※↑利用するFaBo9Axis_MPU9250ライブラリのFaBo9Axis_MPU9250/MPU9250.pyファイル内のprint文をすべてpython3ように()閉じに修正が必要
 │  │
 │  ├─analysis               ：ポスト解析用スクリプトの格納ディレクトリ
 │  │      get_data.py       ：gpslog.gpxをGoogleEarthに取り込むKMLフォーマットへ変換するスクリプト
@@ -28,6 +29,7 @@ space_balloon_and_kite:.
 │          test0_L80_M39.py ：L80_M39で受信したGPS受信データ出力スクリプト(受信せず)    参照先https://wiki.52pi.com/index.php/USB-Port-GPS_Module_SKU:EZ-0048
 │          test1_L80_M39.py ：L80_M39で受信したGPS受信データ出力スクリプト(受信せず)    参照先https://wiki.52pi.com/index.php/USB-Port-GPS_Module_SKU:EZ-0048
 │          test2_L80_M39.py ：L80_M39で受信したGPS受信データ出力スクリプト(受信せず)    参照先https://wiki.52pi.com/index.php/USB-Port-GPS_Module_SKU:EZ-0048
+│          run_mpu9250.py   ：MPU-9250の測定用スクリプト(動作せず)                     参照先https://qiita.com/boyaki_machine/items/915f7730c737f2a5cc79
 │
 └─sh                        ：シェルスクリプトの格納ディレクトリ
         exe_script.sh        : Cronで自動起動しないpythonコマンドへの対応                                               参照先https://qiita.com/Yokohide/items/b4ddc81372501668aa9c
