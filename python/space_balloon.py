@@ -1,0 +1,828 @@
+import math
+import smbus2
+import bme280
+import FaBo9Axis_MPU9250
+import subprocess
+import time
+import csv
+import signal
+import sys
+import argparse
+import threading
+import multiprocessing
+import shutil
+import pandas
+import matplotlib
+import os
+import re
+import numpy
+import datetime
+import glob
+import cv2
+
+########################################################################
+class SensorWrapper:
+
+    def __init__( self , argv ):
+        print("[Info] Create an instance of the SensorWrapper class.")
+        self.argv            = argv
+        self.__bme280_fa     = None
+        self.__mpu6050_fa    = None
+        self.__mpu9250_fa    = None
+        self.__bus           = None
+        self.__mode          = None
+        self.__output_dir    = None
+        self.__camera_en     = None
+        self.__bme280_en     = None
+        self.__mpu6050_en    = None
+        self.__mpu9250_en    = None
+        self.__framerate     = None
+        self.__width         = None
+        self.__height        = None
+        self.__bme280_addr   = None
+        self.__mpu6050_addr  = None
+        self.__bme280_csv    = None
+        self.__mpu6050_csv   = None
+        self.__mpu9250_csv   = None
+        self.__mp4_en        = None
+        self.__altitude_en   = None
+        self.__bme280_graph  = None
+        self.__mpu6050_graph = None
+        self.__mpu9250_graph = None
+        self.__tolerance     = None
+
+    def __handler( self , signum , frame ):
+        self.__bme280_fa .close()
+        self.__mpu6050_fa.close()
+        self.__mpu9250_fa.close()
+        self.__bus       .close()
+        #sys.exit(0)
+
+    def __read_args( self ):
+        parser = argparse.ArgumentParser( description='option' , formatter_class=argparse.RawTextHelpFormatter )
+        parser.add_argument( '--mode'       , '-m' , default=0     , required=True       , help="" )
+        parser.add_argument( '--output_dir' , '-o' , default="./"                        , help="" )
+        parser.add_argument( '--camera'            , default=False , action='store_true' , help="" )
+        parser.add_argument( '--bme280'            , default=False , action='store_true' , help="" )
+        parser.add_argument( '--mpu6050'           , default=False , action='store_true' , help="" )
+        parser.add_argument( '--mpu9250'           , default=False , action='store_true' , help="" )
+        parser.add_argument( '--framerate'         , default="30"                        , help="" )
+        parser.add_argument( '--width'             , default="1920"                      , help="" )
+        parser.add_argument( '--height'            , default="1080"                      , help="" )
+        parser.add_argument( '--bme280_addr'       , default="0x76"                      , help="" )
+        parser.add_argument( '--mpu6050_addr'      , default="0x68"                      , help="" )
+        parser.add_argument( '--frame_sync'        , default=False , action='store_true' , help="" )
+        parser.add_argument( '--movie_csv'                                               , help="" )
+        parser.add_argument( '--bme280_csv'                                              , help="" )
+        parser.add_argument( '--mpu6050_csv'                                             , help="" )
+        parser.add_argument( '--mpu9250_csv'                                             , help="" )
+        parser.add_argument( '--mp4'               , default=False , action='store_true' , help="" )
+        parser.add_argument( '--altitude'          , default=False , action='store_true' , help="" )
+        parser.add_argument( '--bme280_graph'      , default=False , action='store_true' , help="" )
+        parser.add_argument( '--mpu6050_graph'     , default=False , action='store_true' , help="" )
+        parser.add_argument( '--mpu9250_graph'     , default=False , action='store_true' , help="" )
+        parser.add_argument( '--movie'                                                   , help="" )
+        parser.add_argument( '--tolerance'         , default=0.0                         , help="" )
+        try:
+            args                    = parser.parse_args()
+            self.__mode             = int( args.mode )
+            self.__output_dir       = args.output_dir
+            self.__camera_en        = int( args.camera  )
+            self.__bme280_en        = int( args.bme280  )
+            self.__mpu6050_en       = int( args.mpu6050 )
+            self.__mpu9250_en       = int( args.mpu9250 )
+            self.__framerate        = int( args.framerate )
+            self.__width            = int( args.width )
+            self.__height           = int( args.height )
+            self.__bme280_addr      = int( args.bme280_addr  , 16 )
+            self.__mpu6050_addr     = int( args.mpu6050_addr , 16 )
+            self.__movie_csv        = args.movie_csv
+            self.__bme280_csv       = args.bme280_csv
+            self.__mpu6050_csv      = args.mpu6050_csv
+            self.__mpu9250_csv      = args.mpu9250_csv
+            self.__frame_sync_en    = int( args.frame_sync )
+            self.__mp4_en           = int( args.mp4 )
+            self.__altitude_en      = int( args.altitude )
+            self.__bme280_graph_en  = int( args.bme280_graph )
+            self.__mpu6050_graph_en = int( args.mpu6050_graph )
+            self.__mpu9250_graph_en = int( args.mpu9250_graph )
+            self.__movieFile        = args.movie
+            self.__tolerance        = float(args.tolerance)
+        except Exception as e:
+            print(e)
+            sys.exit(1)
+
+    def __setup_sensors( self ):
+        print("[Info] Start the __generate_empty_csvFile function.")
+
+        csvUnixEpochTimeStr = str( time.time() )
+        bme280CsvFile       = self.__output_dir + "/bme280_"  + csvUnixEpochTimeStr + ".csv"
+        mpu6050CsvFile      = self.__output_dir + "/mpu6050_" + csvUnixEpochTimeStr + ".csv"
+        mpu9250CsvFile      = self.__output_dir + "/mpu9250_" + csvUnixEpochTimeStr + ".csv"
+        self.__bus          = smbus2.SMBus(1)
+
+        if self.__camera_en :
+            print("[Info] Activate the Camera Module.")
+            self.__cameraModuleImpl = CameraModuleImpl(
+                self.__output_dir ,
+                self.__framerate  ,
+                self.__width      ,
+                self.__height
+            )
+
+        if self.__bme280_en :
+            print("[Info] Activate the BME280.")
+            data = [
+                [
+                    'elapsed_time'     ,
+                    'start_epoch_time' ,
+                    'unix_epoch_time'  ,
+                    'temperature'      ,
+                    'pressure'         ,
+                    'humidity'
+                ]
+            ]
+            self.__generate_empty_csvFile( bme280CsvFile , data )
+            self.__bme280_fa , bme280_fw = self.__get_csvFile( bme280CsvFile )
+            self.__bme280Impl = BME280Impl  ( self.__bus , self.__bme280_addr , bme280_fw  )
+
+        if self.__mpu6050_en:
+            print("[Info] Activate the MPU6050.")
+            data = [
+                [
+                    'elapsed time'     ,
+                    'start_epoch_time' ,
+                    'unix_epoch_time'  ,
+                    'ax'               ,
+                    'ay'               ,
+                    'az'               ,
+                    'gx'               ,
+                    'gy'               ,
+                    'gz'               ,
+                    'temperature'
+                ]
+            ]
+            self.__generate_empty_csvFile( mpu6050CsvFile ,data )
+            self.__mpu6050_fa , mpu6050_fw = self.__get_csvFile( mpu6050CsvFile )
+            self.__mpu6050Impl = MPU6050Impl( self.__bus , self.__mpu6050_addr , mpu6050_fw )
+
+        if self.__mpu9250_en:
+            print("[Info] Activate the MPU9250.")
+            data = [
+                [
+                    'elapsed_time'     ,
+                    'start_epoch_time' ,
+                    'unix_epoch_time'  ,
+                    'accel'            ,
+                    'gyro'             ,
+                    'magnet'
+                ]
+            ]
+            self.__generate_empty_csvFile( mpu9250CsvFile , data )
+            self.__mpu9250_fa , mpu9250_fw = self.__get_csvFile( mpu9250CsvFile )
+            self.__mpu9250Impl = MPU9250Impl( mpu9250_fw )
+
+    def __generate_empty_csvFile( self , csvFileName , data ):
+        print("[Info] Create the  " + csvFileName + ".")
+        fopen  = open( csvFileName , 'w' , newline='' , encoding='utf-8' )
+        writer = csv.writer( fopen )
+        writer.writerows( data )
+        fopen.close()
+
+    def __get_csvFile( self , csvFileName ):
+        fappend = open( csvFileName , 'a' , newline='' , encoding='utf-8' )
+        writer  = csv.writer( fappend )
+        return fappend , writer
+
+    def __garbage_colloction( self ):
+        pass
+
+    def doSensorWrapper(self):
+        print("[Info] Start the doSensorWrapper function.")
+        self.__read_args()
+
+        if self.__mode == 0:
+            print("[Info] It operates in sensor data output mode.")
+            self.__setup_sensors()
+            threadList = []
+            signal.signal( signal.SIGINT , self.__handler )
+            try:
+                if self.__bme280_en:
+                    bme280Thread  = threading.Thread( target=self.__bme280Impl.doBME280Impl)
+                    threadList.append(bme280Thread)
+                if self.__mpu6050_en:
+                    mpu6050Thread = threading.Thread( target=self.__mpu6050Impl.doMPU6050Impl )
+                    threadList.append(mpu6050Thread)
+                if self.__mpu9250_en:
+                    mpu9250Thread = threading.Thread( target=self.__mpu9250Impl.doMPU9250Impl )
+                    threadList.append(mpu9250Thread)
+                if self.__camera_en :
+                    cameraThread  = threading.Thread( target=self.__cameraModuleImpl.doCameraModuleImpl )
+                    threadList.append(cameraThread)
+                for singleThread in threadList:
+                    singleThread.start()
+                self.__garbage_colloction() # GC
+                for singleThread in threadList:
+                    singleThread.join()
+            except Exception as e:
+                print(e)
+
+        elif self.__mode == 1:
+            print("[Info] It operates in sensor data reading and analysis mode.")
+            sai = SensorAnalyzerImpl(
+                self.__movieFile        ,
+                self.__mp4_en           ,
+                self.__altitude_en      ,
+                self.__bme280_graph_en  ,
+                self.__mpu6050_graph_en ,
+                self.__mpu9250_graph_en ,
+                self.__frame_sync_en    ,
+                self.__bme280_csv       ,
+                self.__mpu6050_csv      ,
+                self.__mpu9250_csv      ,
+                self.__movie_csv        ,
+                self.__tolerance        ,
+                self.__framerate
+            )
+            sai.doSensorAnalyzerImplImpl()
+
+########################################################################
+class CameraModuleImpl:
+
+    def __init__( self , csvFilePath , framerate , width , height ):
+        print("[Info] Create an instance of the CameraModuleImpl class.")
+        self.__csvFilePath = csvFilePath
+        self.__framerate   = framerate
+        self.__width       = width
+        self.__height      = height
+
+    def __start_camera_module( self ):
+        time.sleep(1)
+        subprocess.run(
+            "libcamera-vid --framerate " + str( self.__framerate) +
+            " --width " + str(self.__width) + " --height " + str(self.__height) +
+            " --save-pts " + str(self.__csvFilePath) + "/video_"
+            + str(time.time()) + ".csv -o "+ str(self.__csvFilePath) +"/video_"
+            + str(time.time()) +".h264 --timeout 0 --nopreview",
+            shell          = True ,
+            capture_output = True ,
+            text           = True
+        )
+
+    def doCameraModuleImpl( self ):
+        print("[Info] Start the doCameraModuleImpl function.")
+        try:
+            self.__start_camera_module()
+        except Exception as e:
+            print(e)
+
+########################################################################
+class BME280Impl:
+
+    def __init__( self , bus , address , csvFile ):
+        print("[Info] Create an instance of the BME280Impl class.")
+        print("[Info] The device address of the BME280 is " + str(hex(address)) )
+        self.__start_unix_epoch_time = 0
+        self.__temperature = None
+        self.__pressure    = None
+        self.__humidity    = None
+        self.__csvFile     = csvFile
+        # --- I2C設定 ---
+        self.__address     = address
+        self.__bus         = bus
+        # --- BME/BMP280の初期化 ---
+        self.__calibration_params = bme280.load_calibration_params( self.__bus , self.__address )
+
+    def __read_sensor(self):
+        data               = bme280.sample( self.__bus , self.__address , self.__calibration_params )
+        self.__temperature = data.temperature # [°]
+        self.__pressure    = data.pressure    # [hPa]
+        self.__humidity    = data.humidity    # [%]
+
+    def __output_csv(self):
+        while True:
+            end_unix_epoch_time = time.time()
+            total_time = end_unix_epoch_time - self.__start_unix_epoch_time
+            if self.__temperature and self.__pressure and self.__humidity:
+                data = [
+                    [
+                        total_time                   ,
+                        self.__start_unix_epoch_time ,
+                        end_unix_epoch_time          ,
+                        self.__temperature           ,
+                        self.__pressure              ,
+                        self.__humidity
+                    ]
+                ]
+                self.__csvFile.writerows( data )
+                self.__temperature = None
+                self.__pressure    = None
+                self.__humidity    = None
+            time.sleep(0.0005)
+
+    def doBME280Impl(self):
+        print("[Info] Start the doBME280Impl function.")
+        try:
+            self.__start_unix_epoch_time = time.time()
+            outputThread = threading.Thread( target=self.__output_csv )
+            outputThread.start()
+            while True:
+                self.__read_sensor()
+                time.sleep(0.001)
+        except Exception as e:
+            print(e)
+
+########################################################################
+class MPU6050Impl:
+
+    def __init__( self , bus , address , csvFile ):
+        print("[Info] Create an instance of the MPU6050Impl class.")
+        print("[Info] The device address of the MPU6050 is " + str(hex(address)) )
+        self.__start_unix_epoch_time = 0
+        self.__ax                    = None
+        self.__ay                    = None
+        self.__az                    = None
+        self.__gx                    = None
+        self.__gy                    = None
+        self.__gz                    = None
+        self.__temperature           = None
+        self.__csvFile               = csvFile
+        # --- I2C設定 ---
+        self.__address               = address
+        self.__bus                   = bus
+
+    def __read_word( self , addr ):
+        high = self.__bus.read_byte_data( self.__address , addr   )
+        low  = self.__bus.read_byte_data( self.__address , addr+1 )
+        val = (high << 8) + low
+        if( val < 0x8000 ):
+            return val
+        else:
+            return val - 65536
+
+    def __read_sensor( self ):
+        PWR_MGMT_1a  = 0x6B
+        ACCEL_XOUT_H = 0x3B
+        ACCEL_YOUT_H = 0x3D
+        ACCEL_ZOUT_H = 0x3F
+        GYRO_XOUT_H  = 0x43
+        GYRO_YOUT_H  = 0x45
+        GYRO_ZOUT_H  = 0x47
+        TEMP_OUT_H   = 0x41
+        self.__bus.write_byte_data( self.__address , PWR_MGMT_1a , 0 )
+        self.__ax          =   self.__read_word( ACCEL_XOUT_H ) / 16384.0
+        self.__ay          =   self.__read_word( ACCEL_YOUT_H ) / 16384.0
+        self.__az          =   self.__read_word( ACCEL_ZOUT_H ) / 16384.0
+        self.__gx          =   self.__read_word( GYRO_XOUT_H  ) / 131.0
+        self.__gy          =   self.__read_word( GYRO_YOUT_H  ) / 131.0
+        self.__gz          =   self.__read_word( GYRO_ZOUT_H  ) / 131.0
+        self.__temperature = ( self.__read_word( TEMP_OUT_H ) + 521 ) / 340.0 + 35.0
+
+    def __output_csv(self):
+        while True:
+            end_unix_epoch_time = time.time()
+            total_time = end_unix_epoch_time - self.__start_unix_epoch_time
+            if self.__ax and self.__ay and self.__az and self.__gx and self.__gy and self.__gz and self.__temperature:
+                data = [
+                    [
+                        total_time                   ,
+                        self.__start_unix_epoch_time ,
+                        end_unix_epoch_time          ,
+                        self.__ax                    ,
+                        self.__ay                    ,
+                        self.__az                    ,
+                        self.__gx                    ,
+                        self.__gy                    ,
+                        self.__gz                    ,
+                        self.__temperature
+                    ]
+                ]
+                self.__csvFile.writerows( data )
+                self.__ax          = None
+                self.__ay          = None
+                self.__az          = None
+                self.__gx          = None
+                self.__gy          = None
+                self.__gz          = None
+                self.__temperature = None
+            time.sleep(0.0005)
+
+    def doMPU6050Impl(self):
+        print("[Info] Start the doMPU6050Impl function.")
+        try:
+            self.__start_unix_epoch_time = time.time()
+            outputThread                 = threading.Thread( target=self.__output_csv )
+            outputThread.start()
+            while True:
+                self.__read_sensor()
+                #time.sleep(0.001) # 1msec
+        except Exception as e:
+            print(e)
+
+########################################################################
+class MPU9250Impl:
+
+    def __init__( self , csvFile ):
+        print("[Info] Create an instance of the MPU9250Impl class.")
+        self.__start_unix_epoch_time = 0
+        self.__accel                 = None
+        self.__gyro                  = None
+        self.__magnet                = None
+        self.__csvFile               = csvFile
+
+    def __read_sensor( self ):
+        mpu9250 = FaBo9Axis_MPU9250.MPU9250()
+        self.__accel  = mpu9250.readAccel()
+        self.__gyro   = mpu9250.readGyro()
+        self.__magnet = mpu9250.readMagnet()
+
+    def __output_csv(self):
+        while True:
+            end_unix_epoch_time = time.time()
+            total_time          = end_unix_epoch_time - self.__start_unix_epoch_time
+            if self.__accel and self.__gyro and self.__magnet:
+                data = [
+                    [
+                        total_time                   ,
+                        self.__start_unix_epoch_time ,
+                        end_unix_epoch_time          ,
+                        self.__accel                 ,
+                        self.__gyro                  ,
+                        self.__magnet
+                    ]
+                ]
+                self.__csvFile.writerows( data )
+                self.__accel  = None
+                self.__gyro   = None
+                self.__magnet = None
+            time.sleep(0.0005)
+
+    def doMPU9250Impl(self):
+        print("[Info] Start the doMPU9520Impl function.")
+        try:
+            self.__start_unix_epoch_time = time.time()
+            outputThread = threading.Thread( target=self.__output_csv )
+            outputThread.start()
+            while True:
+                self.__read_sensor()
+                #time.sleep(0.001) # 1msec
+        except Exception as e:
+            print(e)
+
+########################################################################
+class SensorAnalyzerImpl:
+
+    def __init__(
+            self             ,
+            movieFile        ,
+            mp4_en           ,
+            altitude_en      ,
+            bme280_graph_en  ,
+            mpu6050_graph_en ,
+            mpu9250_graph_en ,
+            frame_sync_en    ,
+            bme280_csv       ,
+            mpu6050_csv      ,
+            mpu9250_csv      ,
+            movie_csv        ,
+            tolerance        ,
+            framerate
+    ):
+        print("[Info] Create an instance of the SensorAnalyzerImpl class.")
+        self.__movieFile        = movieFile
+        self.__mp4_en           = mp4_en
+        self.__altitude_en      = altitude_en
+        self.__bme280_graph_en  = bme280_graph_en
+        self.__mpu6050_graph_en = mpu6050_graph_en
+        self.__mpu9250_graph_en = mpu9250_graph_en
+        self.__frame_sync_en    = frame_sync_en
+        self.__bme280_csv       = bme280_csv
+        self.__mpu6050_csv      = mpu6050_csv
+        self.__mpu9250_csv      = mpu9250_csv
+        self.__movie_csv        = movie_csv
+        self.__tolerance        = tolerance
+        self.__framerate        = framerate
+
+    def __conver_h264_to_mp4( self , movieFileName ):
+        print("[Info] Start the __conver_h264_to_mp4 function.")
+        if shutil.which("MP4Box") is not None:
+            if movieFileName is not None:
+                print("[Info] Convert from H.264 to MP4.")
+                subprocess.run(
+                    "MP4Box -add " + movieFileName + " " + movieFileName + ".mp4" +
+                    " 2>&1 | tee MP4Box_" + movieFileName + ".log" ,
+                    shell=True , capture_output=True , text=True
+                )
+            else:
+                print("[Warn] Please set the video file name.")
+        else:
+            print("[Warn] Install it with the following command.")
+            print("[Warn] apt install -y gpac")
+
+    def __generate_alititude_csv( self ):
+        print("[Info] Start the __generate_alititude_csv function.")
+        dataFrame = pandas.read_csv( self.__bme280_csv )
+        basename , extension = os.path.splitext( self.__bme280_csv )
+        dataFrame['altitude'] = dataFrame.apply(
+            lambda row :  self.__calculate_altitude(
+                row['temperature'] , row['humidity'] , row['pressure'] ) , axis=1
+        )
+        dataFrame.to_csv(  basename + "_altitude.csv" , index=False )
+
+    def __calculate_altitude( self , Tc , RH , P ):
+        P0  = 1013.25     # 海面上の標準気圧[hPa]
+        L   = 0.0065      # 温度減率[K/m]
+        g   = 9.80665     # 重力加速度[m/s^2]
+        R   = 8.314462618 # 気体定数[J/(mol·K)]
+        M   = 0.0289644   # 空気のモル質量[kg/mol]
+        P11 = 226.32      # 標準大気における11kmの気圧[hPa]
+        if RH is None or RH <= 0: # 湿度データが無い場合は実測温度を使う
+            Tu = Tc + 273.15 # [K]
+        else:                     # 湿度データがある場合は仮想温度を使う
+            Tu = self.__virtual_temperature( Tc , RH , P )
+        if P > P11:               # 対流圏 (11km以下)
+            h = (Tu / L) * (1 - (P / P0) ** ((R * L) / (g * M)))
+        else:                     # 成層圏 (11km以上)
+            h = 11000 + ( R * Tu ) / ( g * M ) * math.log( P11 / P )
+        return h
+
+    def __virtual_temperature( self , Tc , RH , P ):
+        Tk  = Tc + 273.15  # 気温をKに変換
+        es  = 6.112 * math.exp( (17.67*Tc) / (Tc+243.5) ) # 飽和水蒸気圧(Tetensの式)es[hPa]
+        e   = (RH / 100.0) * es                           # 実際の水蒸気圧e[hPa]
+        r   = (0.622*e) / (P-e)                           # 混合比r[g/kg]
+        Tkv = Tk * ( 1 + 0.61 * r / 1000 )                # 仮想温度[K]
+        return Tkv
+
+    def __generate_bme280_graph( self ):
+        print("[Info] Start the __generate_bme280_graph function.")
+
+    def __generate_mpu6050_graph( self ):
+        print("[Info] Start the __generate_mpu6050_graph function.")
+
+    def __generate_mpu9250_graph( self ):
+        print("[Info] Start the __generate_mpu9250_graph function.")
+
+    def __generate_mpu6050_graph( self ):
+        print("[Info] Start the __generate_mpu6050_graph function.")
+
+    def __analyse_frame_sync( self ):
+        print("[Info] Start the __analyse_frame_sync function.")
+        if self.__movie_csv is not None:
+            dataFrame                     = pandas.read_csv( self.__movie_csv )
+            dataFrame.columns             = ['milli_sec_elapsed_time'] 
+            basename , extension          = os.path.splitext( self.__movie_csv )
+            dataFrame['sec_elapsed_time'] = dataFrame['milli_sec_elapsed_time'] / 1000
+
+            if self.__movieFile is not None:
+                movie_start_time = float(
+                    str(re.sub(r"^.*_", "", self.__movieFile )).replace(".h264","")
+                ) # unix epoch time
+            dataFrame['unix_epoch_time']  = movie_start_time + dataFrame['sec_elapsed_time']
+            
+            dataFrame['current_time']     = dataFrame['unix_epoch_time'].apply(
+                lambda epoch_time_ms :
+                datetime.datetime.fromtimestamp(epoch_time_ms).strftime('%Y-%m-%d %H:%M:%S.') +
+                 f'{datetime.datetime.fromtimestamp(epoch_time_ms).microsecond // 1000:03d}'
+            )
+
+            if self.__bme280_csv  is not None:
+                matchTolerance  = []
+                bme280DataFrame = pandas.read_csv( self.__bme280_csv )
+                for unix_epoch_time in dataFrame['unix_epoch_time']:
+                    match = bme280DataFrame[
+                        ( bme280DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
+                        ( bme280DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
+                    ].copy()
+
+                    if not match.empty:
+                        match['bme280_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                        match                                 = match.loc[match['bme280_unix_epoch_time_delta'].idxmin()]
+                        match                                 = match.to_frame().T
+                        match_row                             = match.rename(
+                            columns={
+                                'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                'temperature'      : 'bme280_temperature'      ,
+                                'pressure'         : 'bme280_pressure'         ,
+                                'humidity'         : 'bme280_humidity'
+                            }
+                        )
+                        matchTolerance.append( match_row )
+
+                    else:
+                        empty_row = pandas.DataFrame( { col : [numpy.nan] for col in bme280DataFrame.columns } )
+                        empty_row = empty_row.rename(
+                            columns={
+                                'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                'temperature'      : 'bme288_temperature'      ,
+                                'pressure'         : 'bme280_pressure'         ,
+                                'humidity'         : 'bme280_humidity'
+                            }
+                        )
+                        matchTolerance.append( empty_row )
+                concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+
+            if self.__mpu6050_csv is not None:
+                matchTolerance  = []
+                mpu6050DataFrame = pandas.read_csv( self.__mpu6050_csv )
+                for unix_epoch_time in dataFrame['unix_epoch_time']:
+                    match = mpu6050DataFrame[
+                        ( mpu6050DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
+                        ( mpu6050DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
+                    ].copy()
+
+                    if not match.empty:
+                        match['mpu6050_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                        match                                 = match.loc[match['mpu6050_unix_epoch_time_delta'].idxmin()]
+                        match                                 = match.to_frame().T
+                        match_row                             = match.rename(
+                            columns={
+                                'elapsed_time'     : 'mpu6050_elapsed_time'     ,
+                                'start_epoch_time' : 'mpu6050_start_epoch_time' ,
+                                'unix_epoch_time'  : 'mpu6050_unix_epoch_time'  ,
+                                'ax'               : 'mpu6050_ax'               ,
+                                'ay'               : 'mpu6050_ay'               ,
+                                'az'               : 'mpu6050_az'               ,
+                                'gx'               : 'mpu6050_gx'               ,
+                                'gy'               : 'mpu6050_gy'               ,
+                                'gz'               : 'mpu6050_gz'               ,
+                                'temperature'      : 'mpu6050_temperature'
+                            }
+                        )
+                        matchTolerance.append( match_row )
+
+                    else:
+                        empty_row = pandas.DataFrame( { col : [numpy.nan] for col in mpu6050DataFrame.columns } )
+                        empty_row = empty_row.rename(
+                            columns={
+                                'elapsed_time'     : 'mpu6050_elapsed_time'     ,
+                                'start_epoch_time' : 'mpu6050_start_epoch_time' ,
+                                'unix_epoch_time'  : 'mpu6050_unix_epoch_time'  ,
+                                'ax'               : 'mpu6050_ax'               ,
+                                'ay'               : 'mpu6050_ay'               ,
+                                'az'               : 'mpu6050_az'               ,
+                                'gx'               : 'mpu6050_gx'               ,
+                                'gy'               : 'mpu6050_gy'               ,
+                                'gz'               : 'mpu6050_gz'               ,
+                                'temperature'      : 'mpu6050_temperature'
+                            }
+                        )
+                        matchTolerance.append( empty_row )
+                concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+
+            if self.__mpu9250_csv is not None:
+                matchTolerance  = []
+                mpu9250DataFrame = pandas.read_csv( self.__mpu9250_csv )
+                for unix_epoch_time in dataFrame['unix_epoch_time']:
+                    match = mpu9250DataFrame[
+                        ( mpu9250DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
+                        ( mpu9250DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
+                    ].copy()
+
+                    if not match.empty:
+                        match['mpu9250_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                        match                                 = match.loc[match['mpu9250_unix_epoch_time_delta'].idxmin()]
+                        match                                 = match.to_frame().T
+                        match_row                             = match.rename(
+                            columns={
+                                'elapsed_time'     : 'mpu9250_elapsed_time'     ,
+                                'start_epoch_time' : 'mpu9250_start_epoch_time' ,
+                                'unix_epoch_time'  : 'mpu9250_unix_epoch_time'  ,
+                                'accel'            : 'mpu9250_accel'            ,
+                                'gyro'             : 'mpu9250_gyro'             ,
+                                'magnet'           : 'mpu9250_magnet'
+                            }
+                        )
+                        matchTolerance.append( match_row )
+
+                    else:
+                        empty_row = pandas.DataFrame( { col : [numpy.nan] for col in mpu9250DataFrame.columns } )
+                        empty_row = empty_row.rename(
+                            columns={
+                                'elapsed_time'     : 'mpu9250_elapsed_time'     ,
+                                'start_epoch_time' : 'mpu9250_start_epoch_time' ,
+                                'unix_epoch_time'  : 'mpu9250_unix_epoch_time'  ,
+                                'accel'            : 'mpu9250_accel'            ,
+                                'gyro'             : 'mpu9250_gyro'             ,
+                                'magnet'           : 'mpu9250_magnet'
+                            }
+                        )
+                        matchTolerance.append( empty_row )
+                concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+
+            dataFrame.to_csv(  basename + "_analyse.csv" , index=False )
+            self.__movie_gen( dataFrame )
+
+    def __movie_gen( self , dataFrame ):
+        print("[Info] Start the __movie_gen function.")
+        os.makedirs( './tmp' , exist_ok=True )
+        self.__separation_h264_to_jpeg( self.__movieFile )
+        self.__add_sensor_frame( dataFrame )
+        self.__merge_jpeg_to_h264( self.__movieFile + ".sensor.h264" , str(self.__framerate) )
+        self.__conver_h264_to_mp4( self.__movieFile + ".sensor.h264" )
+        shutil.rmtree('./tmp')  
+
+    def __separation_h264_to_jpeg( self , movieFileName ):
+        print("[Info] Start the __separation_h264_to_jpeg function.")
+        if shutil.which("ffmpeg") is not None:
+            subprocess.run(
+                "ffmpeg -i " + movieFileName +
+                " -qscale:v 2 tmp/frame_%08d.jpg 2>&1 | tee ffmpeg_output_jpg_" + movieFileName + ".log" ,
+                shell          = True ,
+                capture_output = True ,
+                text           = True
+            )
+        else:
+            print("[Warn] apt install -y ffmpeg")        
+
+    def __add_sensor_frame( self , dataFrame ):
+        print("[Info] Start the __add_sensor_frame function.")
+        imgFiles = sorted(glob.glob('tmp/frame_*.jpg'))
+        frame_index = 0
+        for imgFile in imgFiles:
+            image    = cv2.imread(imgFile)
+            text     =        "DATE                   : " + str( dataFrame.iloc[frame_index]['current_time']       ) + "\n"
+            if self.__bme280_csv  is not None:                
+                text = text + "BME280 TEMPERATURE : " + str( dataFrame.iloc[frame_index]['bme280_temperature'] ) + "\n"
+                text = text + "BME280 PRESSURE     : " + str( dataFrame.iloc[frame_index]['bme280_pressure']    ) + "\n"
+                text = text + "BME280 HUMIDLY       : " + str( dataFrame.iloc[frame_index]['bme280_humidity']    ) + "\n"
+            if self.__mpu6050_csv is not None:
+                text = text + "MPU6050 AX           : " + str( dataFrame.iloc[frame_index]['mpu6050_ax']         ) + "\n"
+                text = text + "MPU6050 AY           : " + str( dataFrame.iloc[frame_index]['mpu6050_ay']         ) + "\n"
+                text = text + "MPU6050 AZ           : " + str( dataFrame.iloc[frame_index]['mpu6050_az']         ) + "\n"
+                text = text + "MPU6050 GX           : " + str( dataFrame.iloc[frame_index]['mpu6050_gx']         ) + "\n"
+                text = text + "MPU6050 GY           : " + str( dataFrame.iloc[frame_index]['mpu6050_gy']         ) + "\n"
+                text = text + "MPU6050 GZ           : " + str( dataFrame.iloc[frame_index]['mpu6050_gz']         ) + "\n"
+            if self.__mpu9250_csv is not None:
+                text = text + "MPU6050 ACCEL        : " + str( dataFrame.iloc[frame_index]['mpu9250_accel']      ) + "\n"
+                text = text + "MPU6050 GYRO         : " + str( dataFrame.iloc[frame_index]['mpu9250_gyro']       ) + "\n"
+                text = text + "MPU6050 MAGNET       : " + str( dataFrame.iloc[frame_index]['mpu9250_magnet']     ) + "\n"
+            x , y       = 10 , 30
+            #font        = cv2.FONT_HERSHEY_SIMPLEX
+            font        = cv2.FONT_HERSHEY_PLAIN
+            font_scale  = 1.5
+            color       = ( 0 , 255 , 0 )
+            thickness   = 1
+            line_height = 30
+            for i, line in enumerate(text.split('\n')):
+                y_pos = y + i * line_height
+                cv2.putText( image , line , (x, y_pos) , font , font_scale , color , thickness , cv2.LINE_AA )
+            cv2.imwrite( str(re.sub(r"frame_", "frame_opencv_", imgFile )) , image)
+            frame_index = frame_index + 1
+            
+    def __merge_jpeg_to_h264( self , movieFileName , framerate ):
+        print("[Info] Start the __merge_jpeg_to_h264 function.")
+        if shutil.which("ffmpeg") is not None:
+            subprocess.run(
+                "ffmpeg -framerate " + str(framerate) +
+                " -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y " + movieFileName +
+                " 2>&1 | tee ffmpeg_output_movie_" + movieFileName + ".log",
+                shell          = True ,
+                capture_output = True ,
+                text           = True
+            )
+        else:
+            print("[Warn] Install it with the following command.")
+            print("[Warn] apt install -y ffmpeg")
+            
+    def doSensorAnalyzerImplImpl( self ):
+        print("[Info] Start the doSensorAnalyzerImplImpl function.")
+        try:
+            threadList = []
+            if self.__mp4_en:
+                threadList.append( threading.Thread
+                    ( args=( self.__movieFile) , target=self.__conver_h264_to_mp4 )
+                )
+            if self.__altitude_en:
+                threadList.append( threading.Thread( target=self.__generate_alititude_csv ) )
+            if self.__bme280_graph_en  :
+                threadList.append( threading.Thread( target=self.__generate_bme280_graph  ) )
+            if self.__mpu6050_graph_en :
+                threadList.append( threading.Thread( target=self.__generate_mpu6050_graph ) )
+            if self.__mpu9250_graph_en :
+                threadList.append( threading.Thread( target=self.__generate_mpu9250_graph ) )
+            if self.__frame_sync_en    :
+                threadList.append( threading.Thread( target=self.__analyse_frame_sync     ) )
+            for signleThread in threadList:
+                signleThread.start()
+            for signleThread in threadList:
+                signleThread.join()
+        except Exception as e:
+            print(e)
+
+########################################################################
+
+def main(argv):
+    print("[Info] Start the main function.")
+    sw = SensorWrapper(argv)
+    sw.doSensorWrapper()
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
