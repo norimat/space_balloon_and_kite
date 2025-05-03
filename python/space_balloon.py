@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import math
 import smbus2
 import bme280
@@ -521,8 +522,8 @@ class SensorAnalyzerImpl:
         self.__tolerance        = tolerance
         self.__excel_en         = excel_en
 
-    def __conver_h264_to_mp4( self , movieFileName ):
-        print("[Info] Start the __conver_h264_to_mp4 function.")
+    def __convert_h264_to_mp4( self , movieFileName ):
+        print("[Info] Start the __convert_h264_to_mp4 function.")
         if shutil.which("MP4Box") is not None:
             if movieFileName is not None:
                 print("[Info] Convert from H.264 to MP4.")
@@ -803,7 +804,7 @@ class SensorAnalyzerImpl:
         framerate = cap.get( cv2.CAP_PROP_FPS )
         self.__add_sensor_frame( dataFrame , framerate )
         self.__merge_jpeg_to_h264( self.__movieFile + ".sensor.h264" , str(framerate) )
-        self.__conver_h264_to_mp4( self.__movieFile + ".sensor.h264" )
+        self.__convert_h264_to_mp4( self.__movieFile + ".sensor.h264" )
         shutil.rmtree('./tmp')  
 
     def __separation_h264_to_jpeg( self , movieFileName ):
@@ -811,7 +812,7 @@ class SensorAnalyzerImpl:
         if shutil.which("ffmpeg") is not None:
             subprocess.run(
                 "ffmpeg -i " + movieFileName +
-                " -qscale:v 2 tmp/frame_%08d.jpg 2>&1 | tee ffmpeg_output_jpg_" + movieFileName + ".log" ,
+                " -qscale:v 2 tmp/frame_%08d.jpg" ,
                 shell          = True ,
                 capture_output = True ,
                 text           = True
@@ -860,8 +861,7 @@ class SensorAnalyzerImpl:
         if shutil.which("ffmpeg") is not None:
             subprocess.run(
                 "ffmpeg -framerate " + str(framerate) +
-                " -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y " + movieFileName +
-                " 2>&1 | tee ffmpeg_output_movie_" + movieFileName + ".log",
+                " -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y " + movieFileName ,
                 shell          = True ,
                 capture_output = True ,
                 text           = True
@@ -876,7 +876,7 @@ class SensorAnalyzerImpl:
             threadList = []
             if self.__mp4_en:
                 threadList.append( threading.Thread
-                    ( args=( self.__movieFile) , target=self.__conver_h264_to_mp4 )
+                    ( args=( self.__movieFile , ) , target=self.__convert_h264_to_mp4 )
                 )
             if self.__altitude_en:
                 threadList.append( threading.Thread( target=self.__generate_alititude_csv ) )

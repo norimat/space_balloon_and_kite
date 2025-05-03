@@ -19,7 +19,7 @@ space_balloon.pyは以下機能を提供する。
 
 space_balloon.pyのクラス構成を以下に示す。
 
-<img src="fig/Class_structure.svg" width= "500px" >
+<img src="fig/Class_structure.svg" width= "900px" >
 
 ### 1-3. 入出力
 
@@ -41,11 +41,37 @@ space_balloon.pyは実行開始時および実行中に有効機能に応じて�
 前述した入力は実行オプションで設定する。
 以下にオプション一覧を示す。
 
-| オプション             | 説明                                                                 |
+| オプション                                | 説明                                               |
 |------------------------|----------------------------------------------------------------------|
 | `-t <ミリ秒>`          | 撮影時間をミリ秒単位で指定します。例: `-t 10000` は10秒間の撮影。 |
 | `-o <ファイル名>`      | 出力ファイル名を指定します。例: `-o video.h264`。             |
 | `--width <幅>`         | 動画の幅(ピクセル)を指定します。例: `--width 1920`。        |
+|`--help`                                  ||
+|`--mode <モード番号>`                      |例: ``|
+|`--output_dir <出力先ディレクトリ名>`       |例: ``|
+|`--camera`                                ||
+|`--bme280`                                ||
+|`--mpu6050`                               ||
+|`--mpu9250`                               ||
+|`--framerate <フレームレート>`             |例: ``|
+|`--bitrate <ビットレート>`                 |例: ``|
+|`--width <水平サイズ>`                     |例: ``|
+|`--height <垂直サイズ>`                    |例: ``|
+|`--bme280_addr <BME280のデバイスアドレス>`  |例: ``|
+|`--mpu6050_addr <MPU6050のデバイスアドレス>`|例: ``|
+|`--frame_sync`                             ||
+|`--movie_csv <動画のcsvファイル>`           |例: ``|
+|`--bme280_csv <BME280のcsvファイル>`        |例: ``|
+|`--mpu6050_csv <MPU6050のcsvファイル>`      |例: ``|
+|`--mpu9250_csv <MPU9250のcsvファイル>`      |例: ``|
+|`--mp4`                                    ||
+|`--altitude`                               ||
+|`--bme280_graph`                           ||
+|`--mpu6050_graph`                          ||
+|`--mpu9250_graph`                          ||
+|`--movie <動画ファイル名>`                  |例: ``|
+|`--tolerance <許容誤差>`                   |例: ``|
+|`--excel`                                 ||
 
 #### 1-3-3. csvファイルおよびDataFrame
 
@@ -58,12 +84,16 @@ csvファイルについてセンサー取得モード時はオプションで�
 動画ファイルについてセンサー取得モード時はカメラモジュールから取得したデータをもとに動画を出力する。一方、センサーデータ解析モードは加工した動画を出力する。加工には読み込んだcsvファイルから取得したデータを動画に埋め込む。
 
 以下は、カメラモジュールから取得したデータを表している。
+(※一部別ソフトウェアを通してぼかしをいれている。)
 
 <img src="fig/Photo_captured_using_a_camera module.svg" width= "500px" >
 
 以下は、カメラモジュールの出力csvおよび他センサーデータ計測データをカメラモジュールから取得したデータに埋め込んだ結果を表している。
 
 <img src="fig/Frame_from_an_edited_video.svg" width= "500px" >
+
+<img src="fig/An_image_with_embedded_measurement_results.svg" width= "500px" >
+
 
 ### 1-4. 動作モード
 
@@ -164,7 +194,7 @@ MPU9250は生産終了に伴い未実装となっている。
 - current_timeは、BME280から*センサー取得モード*時に取得したunix_epoch_timeを日時・時刻形式にした結果を表している。
 - altitudeは、BME280*センサー取得モード*時に取得した温度、気圧および湿度をもとに算出した高度を表している。
 
-なお、高度の算出はに示す。
+なお、高度の算出は後述する[5-2. 高度の算出方法について](#5-2-高度の算出方法について)に示す。
 
 ```text
 elapsed_time  start_epoch_time  unix_epoch_time             current_time  temperature    pressure   humidity    altitude
@@ -222,14 +252,36 @@ milli_sec_elapsed_time  sec_elapsed_time  unix_epoch_time             current_ti
 
 ## 2. 動作環境
 
-#### Raspberry Pi Zero 2 WH
-
-#### Raspberry Pi 4B
-
+計測はRaspberry Pi Zero 2 W、計測結果の加工はRaspberry Pi 4Bを使用する。
+それぞれのスペックについては[付録](#付録)の[Raspberry Piのスペック表](#Raspberry-Piのスペック表)に記載している。
+OSはRaspberry Pi OSでDebinanベースのディストリビューションバージョンBullseyeを使用する。
 
 ## 3. 実行方法
 
-### 3-1. 実行例
+実行例は以下となる。
+
+```text
+$ python space_balloon.py   \
+       --mode 0             \
+       --camera             \
+       --bme280             \
+       --bme280_addr 0x76   \
+       --mpu6050            \
+       --mpu6050_addr 0x68  \
+       --output_dir ./output
+```
+
+```text
+$ python space_balloon.py                                     \
+        --mode 1                                              \
+        --frame_sync                                          \
+        --altitude                                            \
+        --movie       ./output/video_1745853715.150165.h264   \
+        --movie_csv   ./output/video_1745853715.1501062.csv   \
+        --tolerance   0.015                                   \
+        --bme280_csv  ./output/bme280_1745853714.1328616.csv  \
+        --mpu6050_csv ./output/mpu6050_1745853714.1328616.csv
+```
 
 ## 4. カメラモジュールを用いた動画取得について
 
@@ -237,11 +289,49 @@ milli_sec_elapsed_time  sec_elapsed_time  unix_epoch_time             current_ti
 v2かv3でPythonスクリプトの差分は発生しないが、今回はv2で撮影した場合の説明で記載する。
 
 ### 4-1. センサー取得モード時の動画ファイルおよび出力csvファイル
+
 [1-3-3. csvファイルおよびDataFrame](#1-3-3-csvファイルおよびdataframe)に示すようなcsvファイルを出力する。
 
-### 4-2. センサーデータ解析モード時の動画ファイルおよび出力csvファイル
+### 4-2. Pythonコードの説明
 
-### 4-3. Pythonコードの説明
+カメラモジュールを用いて撮影し動画を出力するには、libcamera-vidコマンドで取得できる。
+Pythonのコードでは以下のようにlibcamera-vidを呼び出している。
+
+```py
+    def __start_camera_module( self ):
+        time.sleep(1)
+        subprocess.run(
+            "libcamera-vid --framerate "    + str( self.__framerate) +
+            " --bitrate "                   + str( self.__bitrate ) +
+            " --width "                     + str( self.__width ) +
+            " --height "                    + str( self.__height ) +
+            " --save-pts "                  + str( self.__csvFilePath ) + "/video_"
+            + str(time.time()) + ".csv -o " + str( self.__csvFilePath ) +"/video_"
+            + str(time.time()) +".h264 --timeout 0 --nopreview",
+            shell          = True ,
+            capture_output = True ,
+            text           = True
+        )
+```
+
+libcamera-vidの呼び出ではオプションで以下を指定している。
+- --framerate：撮影時のフレームレート設定
+- --bitrate：撮影時のビットレート設定
+- --width：撮影時に水平サイズ
+- --height：撮影時に垂直サイズ
+- --save-opt：フレーム毎のタイムスタンプをミリ秒単位で出力する設定
+- -o：出力先動画ファイル名
+- --timeout：タイムアウト時間をミリ秒で設定(0にすることで無制限)
+- --nopreview：GUIで撮影プレビューを表示しなくする設定
+
+例えば、30fpsでFullHDの動画を無制限に出力する実行コマンドの例は以下となる。
+なお、FullHDの適正ビットレートは一般的に4\~8Mbpsとされている。
+
+```text
+$ libcamera-vid --framerate 30 --bitrate 8000000 \
+  --width 1920 --height 1080 --save-pts sample.csv -o video.h264 \
+  --timeout 0 --nopreview
+```
 
 ## 5. BME280を用いた高度算出について
 
@@ -313,7 +403,7 @@ M:空気のモル質量(0.0289644[kg/mol])\hspace{0pt}
 成層圏では温度が一定なため、パラメトリック方程式より誤差を抑えられる。
 
 ```math
-h=11000+\frac{RT}{gM}×ln\left( \frac{P_0}{P} \right)
+h=11000+\frac{RT}{gM}×ln\left( \frac{P_u}{P} \right)
 ```
 
 ```math
@@ -364,6 +454,14 @@ P:測定地点の気圧[hPa]\hspace{0pt}
 T_v=T×\left( 1+0.61×r \right)
 ```
 
+```math
+T_v:仮想温度[]\hspace{0pt}
+```
+
+```math
+r:混合比[]\hspace{0pt}
+```
+
 ##### 5-2-3-2. 混合比(Mixing Ratio)
 
 混合比は乾いた空気1gに対して何gの水蒸気が含まれているかを表す。
@@ -373,6 +471,18 @@ T_v=T×\left( 1+0.61×r \right)
 r=\frac{0.622×e}{P-e}
 ```
 
+```math
+r:混合比[]\hspace{0pt}
+```
+
+```math
+e:実際の水蒸気圧[]\hspace{0pt}
+```
+
+```math
+P:[]\hspace{0pt}
+```
+
 ##### 5-2-3-3. 水蒸気圧(Vapor Pressure)
 
 実際の空気中の水蒸気圧力は以下の式で求める。
@@ -380,6 +490,18 @@ r=\frac{0.622×e}{P-e}
 
 ```math
 e=e_s×\left( \frac{RH}{100} \right)
+```
+
+```math
+e:実際の水蒸気圧[]\hspace{0pt}
+```
+
+```math
+e_s:飽和水蒸気圧[]\hspace{0pt}
+```
+
+```math
+RH:[]\hspace{0pt}
 ```
 
 <!--------------------------------------------------------------------------------->
@@ -395,35 +517,11 @@ e_s=6.112×exp\left( \frac{17.67×T_c}{T_c-243.5} \right)
 ```
 
 ```math
-h:高度[m]\hspace{209pt}
+e_s:飽和水蒸気圧[]\hspace{0pt}
 ```
 
 ```math
-P:測定地点の気圧[hPa]\hspace{148pt}
-```
-
-```math
-P_0:基準地点の気圧(通常は海面気圧=1013.25[hPa])\hspace{24pt}
-```
-
-```math
-T_0:基準温度(通常は288.15[K])\hspace{82pt}
-```
-
-```math
-L:気温の lapse rate(気温減率、標準大気では 0.0065[K/m])\hspace{0pt}
-```
-
-```math
-R:気体定数(287.05[J/(kg·K)])\hspace{121pt}
-```
-
-```math
-g:重力加速度(9.80665[m/s^2])\hspace{126pt}
-```
-
-```math
-M:空気のモル質量(0.0289644[kg/mol])\hspace{88pt}
+T_c:[]\hspace{0pt}
 ```
 
 <!--------------------------------------------------------------------------------->
@@ -464,20 +562,16 @@ M:空気のモル質量(0.0289644[kg/mol])\hspace{88pt}
         return Tkv
 ```
 
-<!--------------------------------------------------------------------------------->
-<!-- <img src="figure/sample.svg" width= "300px" > -->
-<!--------------------------------------------------------------------------------->
-
 ## 6. MPU6050を用いた加速度および角速度の取得について
 
 ### 6-1. MPU6050について
 
 MPU6050で計測可能なデータは以下である。
 
-| x軸加速度・y軸加速度・z軸加速度 | x軸角速度・y軸角速度・z軸角速度 | 温度    |
-|------------------------------|-------------------------------|---------|
-| 単位:g(重力加速度)            | 単位:°/S(度毎秒)               |         |
-|  a                           |  a                              |         |
+| x軸加速度・y軸加速度・z軸加速度 | x軸角速度・y軸角速度・z軸角速度 | 温度            |
+|------------------------------|-------------------------------|-----------------|
+| 単位:g(重力加速度)             | 単位:°/S(度毎秒)               | 単位:℃(摂氏)    |
+| ±2g、±4g、±8g、±16g           | ±250、±500、±1000、±2000 °/s  |計測範囲:-40\~+85℃|
 
 ### 6-2. Pythonコードの説明
 
@@ -534,9 +628,12 @@ ICM20948入手後、実装および動作確認予定。
 
 ## 9. センサーデータ動画およびcsv出力に伴うオーバヘッドの回避
 
-
 ## 10. 今後の課題
-
+今回はPythonで実装した。しかし、Pythonは内部でCコードを呼び出しセンサーへのアクセスをしている。
+このため、センサーアクセスはPythonでなくC/C++コードは直接のセンサーアクセスが可能で高速に処理できることからオーバヘッドを削減しより時間的精度を高く処理ができる。
+また、調査によるとカメラモジュールの制御もlibcameraのC++ライブラリによりアクセス可能な可能性がある。
+このことから、C++でカメラモジュールおよびセンサー制御を実装することで時間的精度を上げてアクセス可能である。
+消費電力の観点からも精度が上がることでカメラモジュールアクセス起点でセンサーアクセスをすることで改善する可能性が高い。
 
 ## 付録
 
@@ -546,6 +643,7 @@ ICM20948入手後、実装および動作確認予定。
 Codenameの欄が該当箇所。
 例では、Bullseyeとなっているが、2025/04/30時点で1つ古いバージョンとなっており、最新はBookwormとなっている。
 BullseyeとBookwormからカメラモジュールの設定ファイルやIPアドレス固定向けファイルの配置場所が変わっている。
+また、libcamera-vidなどで使用可能なオプションも変わってくる。
 
 ```text
 $ lsb_release -a
@@ -555,6 +653,45 @@ Description:    Raspbian GNU/Linux 11 (bullseye)
 Release:        11
 Codename:       bullseye
 ```
+
+### Python実行環境準備
+
+Python実行環境を分離し管理しやすいように仮想環境を使用する。
+これによりバージョンが異なるライブラリや依存関係を使い分けやすくする。
+
+仮想環境は以下コマンドで作成できる。
+
+```text
+$ python -m venv python_space_balloon
+```
+
+仮想環境は以下コマンドで有効かできる。
+
+```text
+$ source python_space_balloon/bin/activate
+```
+
+有効化後、space_balloon.pyを実行するために必要なライブラリをインストールする。
+
+```text
+$ pip install smbus2
+$ pip install FaBo9Axis_MPU9250
+$ pip install smbus
+$ pip install pandas
+$ pip install matplotlib
+$ pip install opencv-python
+$ pip install openpyxl
+$ pip install rpi.bme280
+```
+
+FaBo9Axis_MPU9250はpython 2系のコードでprint文がpython 3系で実行できないためコードを編集する。
+まず、pythonコマンドを実行し、エラーが以下ファイルで発生するためエディタで編集する。
+print文を検索し、python 3系の記述に変更する。
+
+```text
+$ emacs python_space_balloon/lib/python3.9/site-packages/FaBo9Axis_MPU9250/MPU9250.py
+```
+※emacsはviやnanoでも問題ない。
 
 ### Sambaの設定
 
@@ -689,52 +826,119 @@ default via 192.168.0.1がルーターのIPアドレスとなる。
 
 | 特性                     | **Camera Module v2**                        | **Camera Module v3**                           |
 |--------------------------|---------------------------------------------|------------------------------------------------|
-| 搭載センサー             | Sony IMX219                                 | Sony IMX708                                    |
-| 解像度                   | 8メガピクセル(3280×2464)                  | 12メガピクセル(4608×2592)                    |
-| 最大動画解像度           | 1080p(1920×1080)                          | 最大 4608×2592                                 |
-| 最大フレームレート       | 1080p @ 30fps                               | 1080p @ 60fps / 4608×2592 @ 30fps              |
-| フォーカス               | 固定フォーカス                              | オートフォーカス(通常モデル)                |
-| HDR対応                 | 非対応                                     | 対応(HDRモード搭載)                         |
-| ピクセルサイズ           | 1.12μm                                      | 1.4μm(暗所性能向上)                          |
-| センサーサイズ           | 1/4インチ                                   | 1/2.43インチ                                   |
-| 視野角(FOV)            | 約62.2度                                    | 約76度(通常モデル)、最大120度(広角モデル) |
-| レンズ形式               | 固定(交換不可)                            | M12マウント対応モデルあり                     |
-| I2C接続とリボンケーブル  | CSI(15ピン)                              | CSI(15ピン、互換性あり)                     |
-| 推奨用途                 | 基本的な画像処理、教育用、小規模プロジェクト | 高画質撮影、暗所性能、機械学習、ビデオストリーム |
-
-### libcamera-vid オプション一覧
-
-| オプション             | 説明                                                                 |
-|------------------------|----------------------------------------------------------------------|
-| `-t <ミリ秒>`          | 撮影時間をミリ秒単位で指定します。例: `-t 10000` は10秒間の撮影。 |
-| `-o <ファイル名>`      | 出力ファイル名を指定します。例: `-o video.h264`。             |
-| `--width <幅>`         | 動画の幅(ピクセル)を指定します。例: `--width 1920`。        |
-| `--height <高さ>`      | 動画の高さ(ピクセル)を指定します。例: `--height 1080`。      |
-| `--framerate <fps>`    | フレームレート(1秒あたりのフレーム数)を指定します。例: `--framerate 30`。 |
-| `--bitrate <bps>`      | ビットレート(1秒あたりのビット数)を指定します。例: `--bitrate 8000000` は8Mbps。 |
-| `--codec <形式>`        | エンコード形式を指定します。`h264`(デフォルト)、`mjpeg`、`yuv420` など。例: `--codec mjpeg`。 |
-| `--profile <プロファイル>` | H.264 のプロファイルを指定します。`baseline`、`main`、`high` など。 |
-| `--level <レベル>`      | H.264 のレベルを指定します。例: `--level 4.1`。                     |
-| `--nopreview`  | プレビューウィンドウを表示しません。SSH 接続時などに便利です。       |
-| `--fullscreen` | プレビューを全画面表示します。                                       |
-| `--qt-preview` | Qt ベースのプレビューウィンドウを使用します。                       |
-| `--segment <ミリ秒>`     | 指定した時間ごとに新しいファイルに分割して保存します。例: `--segment 10000` は10秒ごとに分割。 |
-| `--inline`               | ストリームに SPS/PPS ヘッダーをインラインで挿入します。ストリーミング時に必要です。 |
-| `--listen`               | TCP ストリーミング時にサーバーモードで待機します。                  |                                                         
-| `--shutter <マイクロ秒>` | シャッター速度をマイクロ秒単位で指定します。例: `--shutter 20000`。   |
-| `--gain <値>`          | アナログゲインを指定します。例: `--gain 1.5`。                       |
-| `--awb <モード>`       | 自動ホワイトバランスモードを指定します。例: `--awb auto`。            |
-| `--exposure <モード>`  | 露出モードを指定します。例: `--exposure normal`。                     |
-| `--verbose`            | 詳細なログ情報を出力します。デバッグ時に有用です。                   |
-| `--log-level <レベル>` | ログの出力レベルを指定します。例: `--log-level debug`。            
-| `--save-pts <ファイル名>` | 各フレームのタイムスタンプをミリ秒単位で指定したファイルに保存します。例: `--save-pts timestamps.txt`。 |
+| 搭載センサー              | Sony IMX219                                 | Sony IMX708                                    |
+| 解像度                   | 8メガピクセル(3280×2464)                     | 12メガピクセル(4608×2592)                       |
+| 最大動画解像度            | 1080p(1920×1080)                            | 最大 4608×2592                                 |
+| 最大フレームレート        | 1080p @ 30fps                               | 1080p @ 60fps / 4608×2592 @ 30fps              |
+| フォーカス               | 固定フォーカス                                | オートフォーカス(通常モデル)                     |
+| HDR対応                  | 非対応                                      | 対応(HDRモード搭載)                             |
+| ピクセルサイズ            | 1.12μm                                      | 1.4μm(暗所性能向上)                             |
+| センサーサイズ            | 1/4インチ                                   | 1/2.43インチ                                    |
+| 視野角(FOV)              | 約62.2度                                    | 約76度(通常モデル)、最大120度(広角モデル)         |
+| レンズ形式               | 固定(交換不可)                               | M12マウント対応モデルあり                        |
+| I2C接続とリボンケーブル   | CSI(15ピン)                                 | CSI(15ピン、互換性あり)                          |
+| 推奨用途                 | 基本的な画像処理、教育用、小規模プロジェクト    | 高画質撮影、暗所性能、機械学習、ビデオストリーム    |
 
 ### Raspberry Piのスペック表
 
+|項目|Raspberry Pi<br>3A+|Raspberry Pi<br>3B+|Raspberry Pi<br>Zero(無印)|Raspberry Pi<br>Zero 2 W|Raspberry Pi<br>4B|Raspberry Pi<br>5|
+|-----|-----|-----|-----|-----|-----|-----|
+|CPU|Broadcom BCM2837B0,<br>1.4GHz クアッドコア<br>ARM Cortex-A53|Broadcom BCM2837B0,<br>1.4GHz クアッドコア<br>ARM Cortex-A53|Broadcom BCM2835,<br>ARM1176JZF-S|Broadcom BCM2710A1,<br>1GHz クアッドコア<br>ARM Cortex-A53|Broadcom BCM2711,<br>1.5GHz クアッドコア<br>ARM Cortex-A72|Broadcom BCM2712,<br>3.0GHz クアッドコア<br>ARM Cortex-A76|
+|GPU|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore VI|Broadcom<br>VideoCore VII|
+|RAM|512MB<br>LPDDR2|1GB<br>LPDDR2|512MB<br>LPDDR2|512MB<br>LPDDR2|2GB/4GB/8GB<br>LPDDR4-3200|4GB/8GB/16GB<br>LPDDR4X|
+|CPUクロック|1.4GHz|1.4GHz|1.0GHz|1.0GHz|1.5GHz|3.0GHz|
+|H.264ハードウェア<br>エンコード|対応(最大1080p30)|対応(最大1080p60)|対応(最大1080p30)|対応(最大1080p30)|対応(最大4K30)|対応(最大4K60)|
+|I2C SCLクロック|最大 1.0GHz(CPU)|最大 1.0GHz(CPU)|最大 400kHz(CPU)|最大 1.0GHz(CPU)|最大 1.5GHz(CPU)|最大 1.5GHz(CPU)|
+|消費電力|約 2.5W<br>(待機時:約 0.5W)|約 3.7W<br>(待機時:約 0.5W)|約 0.4\~1.0W<br>(利用状況に依存)|約 1.5W<br>(待機時:約 0.2W)|約 5W<br>(待機時:約 1W)|約 8W<br>(待機時:約 2W)|
+|アンペアアワー|約 1.0A<br>(フル稼働時)|約 1.5A<br>(フル稼働時)|約 0.08\~0.2Ah<br>(5V 時)|約 1.0A<br>(フル稼働時)|約 3A<br>(フル稼働時)|約 4A<br>(フル稼働時)|
+|H.264ハードウェア<br>デコード|対応<br>(最大1080p30)|対応<br>(最大1080p60)|対応<br>(最大1080p30)|対応<br>(最大1080p30)|対応<br>(最大4K30)|対応<br>(最大4K60)|
+|Bluetooth|Bluetooth 4.2|Bluetooth 4.2|非搭載|Bluetooth 4.2|Bluetooth 5.0|Bluetooth 5.2|
+|Wi-Fi|802.11n Wi-Fi|802.11ac Wi-Fi(2.4GHz/5GHz)|非搭載|802.11n Wi-Fi|2.4GHz/5GHz Wi-Fi|802.11ac/802.11ax Wi-Fi|
+|カメラ接続|CSIカメラポート<br>(カメラモジュール使用可能)|CSIカメラポート<br>(カメラモジュール使用可能)|CSIカメラポート<br>(要変換ケーブル)|CSIカメラポート<br>(カメラモジュール使用可能)|CSIカメラポート<br>(カメラモジュール使用可能)|CSIカメラポート<br>(カメラモジュール使用可能)|
+|ディスプレイ接続|HDMI<br>(標準HDMI)|HDMI<br>(標準HDMI)|mini HDMI<br>(最大1080p)|なし<br>(HDMI出力にはマイクロHDMIが必要)|2 x micro HDMI<br>(最大4K30対応)|2 x micro HDMI<br>(最大4K60対応)|
+|イーサネット|なし(Wi-Fi使用)|10/100 Mbps イーサネット|非搭載<br>(USB→有線LANアダプタ利用可)|なし(Wi-Fi使用)|Gigabit Ethernet|Gigabit Ethernet|
+|電源供給|microUSB 5V<br>(標準供給:2.5A)|microUSB 5V<br>(標準供給:2.5A)|micro USB<br>(5V 1A 推奨)|microUSB 5V<br>(標準供給:2.5A)|USB-C 5V<br>(標準供給:3A)|USB-C 5V<br>(標準供給:4A)|
+|消費電流(アイドル時)|約 0.3A|約 0.4A|約 80\~120mA|約 0.2A|約 0.6A|約 0.8A|
+|消費電流(高負荷時)|約 1.5A|約 2.0A|約 150\~200mA|約 1.2A|約 2.5A|約 3.5A|
+|電流換算(1時間使用時)|約 1.0Ah|約 1.2Ah|約 0.1\~0.2Ah|約 0.8Ah|約 2.0Ah|約 3.0Ah|
+
+### MS-LB3 Smart Mobile Batteryスペック表
+
+|項目|詳細|
+|----|----|
+|製品名|MS-LB3 Smart Mobile Battery|
+|メーカー|milestone(マイルストーン)|
+|容量|3,400mAh|
+|電圧|3.7V|
+|出力電圧|5V(USBポート出力)|
+|出力電流|最大 2.1A|
+|エネルギー容量|12.58Wh|
+|重量|約50g|
+|サイズ|直径:65mm、高さ:25mm|
+|出力ポート|USB Type-C(付属ケーブル経由でUSB-A出力対応)|
+|充電時間|約3.5時間でフル充電|
+|発売日|2022年7月中旬|
+|備考|急速充電(PD)非対応、残量インジケーターあり(緑色点灯)|
+
+### BM280のスペック表
+
+|項目|内容|
+|----|----|
+|測定項目|温度、湿度、気圧|
+|供給電圧(VDD)|1.71V\~3.6V|
+|I/O電圧(VDDIO)|1.2V\~3.6V(通常はVDDと同じに接続)|
+|消費電流|通常動作時：\~0.6 μA(1Hzモード)スリープ時：0.1 μA|
+|通信インターフェース|I2C、SPI(最大3.4 MHz)|
+|I2Cアドレス|0x76 または 0x77(SDOピンの接続で切替)|
+|動作温度範囲|-40°C\~+85°C|
+|動作湿度範囲|0%\~100% RH(結露なし)|
+|動作気圧範囲|300 hPa\~1100 hPa(高度で約0m\~9000mに相当)|
+
+### MPU6050のスペック表
+
+|項目|内容|
+|----|----|
+|測定項目|3軸加速度 + 3軸角速度(ジャイロ)|
+|通信インターフェース|I2C(標準)補助用I2Cスレーブバス(別センサ接続用)|
+|I2Cアドレス|0x68(AD0ピン=Low)または 0x69(AD0ピン=High)|
+|供給電圧(VDD)|2.375V\~3.46V(通常は3.3V)|
+|I/Oレベル|1.8V\~VDD(プルアップ必須)|
+|消費電流|約3.9mA(動作時)スリープ時：約5μA|
+|内蔵DMP|Digital Motion Processor(姿勢推定・センサフュージョン可能)|
+|温度センサー|内蔵あり(粗精度)|
+|動作温度範囲|-40°C\~+85°C|
+
 ### 消費電力の見積り
 
-### 動画フォーマットおよび容量の比較見積り
+MS-LB3 Smart Mobile Batteryを使用した想定での消費電力を見積もる
+- バッテリー容量:3,400mAh(=3.4Ah)
+- 電圧変換ロス考慮(実効効率 約85%):実使用可能容量≒2.9Ah
 
-### libcamera-vid出力可能なメタデータ
+- バッテリーのワット時(Wh)を算出
+```math
+3.4Ah×3.7V=12.58Wh
+```
+- Raspberry Pi Zero 2Wの電源供給5Vに対してモバイルバッテリーの電圧を昇圧し共有する
+  - 昇圧に伴う変換効率は一般的に85%で残り15%は熱として失われる
+  - 実効使用可能エネルギー(実際に利用できるエネルギー)は以下のように算出できる
+```math
+12.58Wh×0.85≒10.7Wh
+```
+- Raspberry Pi Zero 2 Wの稼働時間について
+  - Raspberry Pi Zero 2 Wの消費電力は以下のようになる
+    - アイドル時:0.14A\~0.2A
+    - 軽負荷時:0.3A\~0.4A
+    - 高負荷時:0.5A\~0.6A
+  - 稼働時間は以下のように算出できる
+```math
+稼働時間[h]=\frac{バッテリー容量[Ah]}{消費電力[A]}
+```
 
-### C++によるlibcameraライブラリ使用による精度向上について
+|状態|消費電力 (W)|消費電流 (A)|稼働時間 (時間)|
+|--|--|--|--|
+|アイドル時|0.7W\~1W|0.14A\~0.2A|約17\~24時間|
+|軽負荷時|1.5W\~2W|0.3A\~0.4A|約8.5\~11.3時間|
+|高負荷時|2.5W\~3W|0.5A\~0.6A|約5.7\~6.8時間|
+
+※計算結果は理論値で温度など外的要因で影響を受ける
+
