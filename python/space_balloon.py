@@ -19,6 +19,13 @@ import numpy
 import datetime
 import glob
 import cv2
+import openpyxl
+from openpyxl.styles import PatternFill , Alignment , Font , Border , Side
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.utils import get_column_letter
+from openpyxl.styles import PatternFill, Alignment
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.worksheet.table import Table, TableStyleInfo
 
 ########################################################################
 class SensorWrapper:
@@ -37,6 +44,7 @@ class SensorWrapper:
         self.__mpu6050_en    = None
         self.__mpu9250_en    = None
         self.__framerate     = None
+        self.__bitrate       = None
         self.__width         = None
         self.__height        = None
         self.__bme280_addr   = None
@@ -50,6 +58,7 @@ class SensorWrapper:
         self.__mpu6050_graph = None
         self.__mpu9250_graph = None
         self.__tolerance     = None
+        self.__excel_en      = None
 
     def __handler( self , signum , frame ):
         self.__bme280_fa .close()
@@ -67,6 +76,7 @@ class SensorWrapper:
         parser.add_argument( '--mpu6050'           , default=False , action='store_true' , help="" )
         parser.add_argument( '--mpu9250'           , default=False , action='store_true' , help="" )
         parser.add_argument( '--framerate'         , default="30"                        , help="" )
+        parser.add_argument( '--bitrate'           , default="8000000"                   , help="" )
         parser.add_argument( '--width'             , default="1920"                      , help="" )
         parser.add_argument( '--height'            , default="1080"                      , help="" )
         parser.add_argument( '--bme280_addr'       , default="0x76"                      , help="" )
@@ -83,6 +93,7 @@ class SensorWrapper:
         parser.add_argument( '--mpu9250_graph'     , default=False , action='store_true' , help="" )
         parser.add_argument( '--movie'                                                   , help="" )
         parser.add_argument( '--tolerance'         , default=0.0                         , help="" )
+        parser.add_argument( '--excel'             , default=False , action='store_true' , help="" )
         try:
             args                    = parser.parse_args()
             self.__mode             = int( args.mode )
@@ -92,6 +103,7 @@ class SensorWrapper:
             self.__mpu6050_en       = int( args.mpu6050 )
             self.__mpu9250_en       = int( args.mpu9250 )
             self.__framerate        = int( args.framerate )
+            self.__bitrate          = int( args.bitrate )
             self.__width            = int( args.width )
             self.__height           = int( args.height )
             self.__bme280_addr      = int( args.bme280_addr  , 16 )
@@ -108,6 +120,8 @@ class SensorWrapper:
             self.__mpu9250_graph_en = int( args.mpu9250_graph )
             self.__movieFile        = args.movie
             self.__tolerance        = float(args.tolerance)
+            self.__excel_en         = int( args.excel )
+
         except Exception as e:
             print(e)
             sys.exit(1)
@@ -126,6 +140,7 @@ class SensorWrapper:
             self.__cameraModuleImpl = CameraModuleImpl(
                 self.__output_dir ,
                 self.__framerate  ,
+                self.__bitrate    ,
                 self.__width      ,
                 self.__height
             )
@@ -242,27 +257,30 @@ class SensorWrapper:
                 self.__mpu9250_csv      ,
                 self.__movie_csv        ,
                 self.__tolerance        ,
-                self.__framerate
+                self.__excel_en
             )
             sai.doSensorAnalyzerImplImpl()
 
 ########################################################################
 class CameraModuleImpl:
 
-    def __init__( self , csvFilePath , framerate , width , height ):
+    def __init__( self , csvFilePath , framerate , bitrate , width , height ):
         print("[Info] Create an instance of the CameraModuleImpl class.")
         self.__csvFilePath = csvFilePath
         self.__framerate   = framerate
+        self.__bitrate     = bitrate
         self.__width       = width
         self.__height      = height
 
     def __start_camera_module( self ):
         time.sleep(1)
         subprocess.run(
-            "libcamera-vid --framerate " + str( self.__framerate) +
-            " --width " + str(self.__width) + " --height " + str(self.__height) +
-            " --save-pts " + str(self.__csvFilePath) + "/video_"
-            + str(time.time()) + ".csv -o "+ str(self.__csvFilePath) +"/video_"
+            "libcamera-vid --framerate "    + str( self.__framerate) +
+            " --bitrate "                   + str( self.__bitrate ) +
+            " --width "                     + str( self.__width ) +
+            " --height "                    + str( self.__height ) +
+            " --save-pts "                  + str( self.__csvFilePath ) + "/video_"
+            + str(time.time()) + ".csv -o " + str( self.__csvFilePath ) +"/video_"
             + str(time.time()) +".h264 --timeout 0 --nopreview",
             shell          = True ,
             capture_output = True ,
@@ -486,7 +504,7 @@ class SensorAnalyzerImpl:
             mpu9250_csv      ,
             movie_csv        ,
             tolerance        ,
-            framerate
+            excel_en
     ):
         print("[Info] Create an instance of the SensorAnalyzerImpl class.")
         self.__movieFile        = movieFile
@@ -501,7 +519,7 @@ class SensorAnalyzerImpl:
         self.__mpu9250_csv      = mpu9250_csv
         self.__movie_csv        = movie_csv
         self.__tolerance        = tolerance
-        self.__framerate        = framerate
+        self.__excel_en         = excel_en
 
     def __conver_h264_to_mp4( self , movieFileName ):
         print("[Info] Start the __conver_h264_to_mp4 function.")
@@ -527,7 +545,58 @@ class SensorAnalyzerImpl:
             lambda row :  self.__calculate_altitude(
                 row['temperature'] , row['humidity'] , row['pressure'] ) , axis=1
         )
-        dataFrame.to_csv(  basename + "_altitude.csv" , index=False )
+        dataFrame['current_time']     = dataFrame['unix_epoch_time'].apply(
+            lambda epoch_time_ms :
+            datetime.datetime.fromtimestamp(epoch_time_ms).strftime('%Y-%m-%d %H:%M:%S.') +
+            f'{datetime.datetime.fromtimestamp(epoch_time_ms).microsecond // 1000:03d}'
+        )
+        cols = list( dataFrame.columns )
+        cols.remove( 'current_time' )
+        insert_pos = cols.index('unix_epoch_time') + 1
+        cols.insert( insert_pos , 'current_time' )
+        dataFrame = dataFrame[cols]
+
+        if self.__excel_en:
+            self.__output_to_excel( "bme280" , basename + "_altitude.xlsx" , dataFrame )
+            #dataFrame.to_excel(  basename + "_altitude.xlsx" , index=False )
+        else:
+            dataFrame.to_csv  (  basename + "_altitude.csv"  , index=False )
+
+    def __output_to_excel( self , sheetName , fileName , dataFrame ):
+        wb              = openpyxl.Workbook()
+        ws              = wb.active
+        ws.title        = sheetName
+        ws.freeze_panes = 'B2'
+        font            = Font(name='BIZ UDゴシック', size=11)
+        no_border = Border(
+            # left   = Side( border_style=None ) ,
+            # right  = Side( border_style=None ) ,
+            # top    = Side( border_style=None ) ,
+            # bottom = Side( border_style=None )
+            left    = Side( style='thin' ) ,
+            right   = Side( style='thin' ) ,
+            top     = Side( style='thin' ) ,
+            bottom  = Side( style='thin' )
+        )
+
+        # Data writing & font/border settings
+        for r_idx, row in enumerate( dataframe_to_rows( dataFrame , index=False , header=True ) , start=1 ):
+            for c_idx , value in enumerate( row , start=1 ):
+                cell        = ws.cell(row=r_idx, column=c_idx, value=value)
+                cell.font   = font
+                cell.border = no_border
+                if r_idx == 1:
+                    cell.fill      = PatternFill(start_color='F2F2F2', end_color='F2F2F2', fill_type='solid')
+                    cell.alignment = Alignment( horizontal='center', vertical='center' )
+
+        # Auto-adjust column width
+        for col_idx, column_cells in enumerate( ws.columns , start=1 ):
+            max_length     = max( len( str(cell.value) ) if cell.value is not None else 0 for cell in column_cells )
+            adjusted_width = max_length + 2.5
+            col_letter     = get_column_letter(col_idx)
+            ws.column_dimensions[col_letter].width = adjusted_width
+        ws.auto_filter.ref = ws.dimensions
+        wb.save( fileName )
 
     def __calculate_altitude( self , Tc , RH , P ):
         P0  = 1013.25     # 海面上の標準気圧[hPa]
@@ -535,15 +604,15 @@ class SensorAnalyzerImpl:
         g   = 9.80665     # 重力加速度[m/s^2]
         R   = 8.314462618 # 気体定数[J/(mol·K)]
         M   = 0.0289644   # 空気のモル質量[kg/mol]
-        P11 = 226.32      # 標準大気における11kmの気圧[hPa]
+        Pu  = 226.32      # 標準大気における11kmの気圧[hPa]
         if RH is None or RH <= 0: # 湿度データが無い場合は実測温度を使う
             Tu = Tc + 273.15 # [K]
         else:                     # 湿度データがある場合は仮想温度を使う
             Tu = self.__virtual_temperature( Tc , RH , P )
-        if P > P11:               # 対流圏 (11km以下)
+        if P > Pu:                # 対流圏 (11km以下)
             h = (Tu / L) * (1 - (P / P0) ** ((R * L) / (g * M)))
         else:                     # 成層圏 (11km以上)
-            h = 11000 + ( R * Tu ) / ( g * M ) * math.log( P11 / P )
+            h = 11000 + ( R * Tu ) / ( g * M ) * math.log( Pu / P )
         return h
 
     def __virtual_temperature( self , Tc , RH , P ):
@@ -578,154 +647,162 @@ class SensorAnalyzerImpl:
                 movie_start_time = float(
                     str(re.sub(r"^.*_", "", self.__movieFile )).replace(".h264","")
                 ) # unix epoch time
-            dataFrame['unix_epoch_time']  = movie_start_time + dataFrame['sec_elapsed_time']
+                dataFrame['unix_epoch_time']  = movie_start_time + dataFrame['sec_elapsed_time']
             
-            dataFrame['current_time']     = dataFrame['unix_epoch_time'].apply(
-                lambda epoch_time_ms :
-                datetime.datetime.fromtimestamp(epoch_time_ms).strftime('%Y-%m-%d %H:%M:%S.') +
-                 f'{datetime.datetime.fromtimestamp(epoch_time_ms).microsecond // 1000:03d}'
-            )
+                dataFrame['current_time']     = dataFrame['unix_epoch_time'].apply(
+                    lambda epoch_time_ms :
+                    datetime.datetime.fromtimestamp(epoch_time_ms).strftime('%Y-%m-%d %H:%M:%S.') +
+                    f'{datetime.datetime.fromtimestamp(epoch_time_ms).microsecond // 1000:03d}'
+                )
 
-            if self.__bme280_csv  is not None:
-                matchTolerance  = []
-                bme280DataFrame = pandas.read_csv( self.__bme280_csv )
-                for unix_epoch_time in dataFrame['unix_epoch_time']:
-                    match = bme280DataFrame[
-                        ( bme280DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
-                        ( bme280DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
-                    ].copy()
+                if self.__bme280_csv  is not None:
+                    matchTolerance  = []
+                    bme280DataFrame = pandas.read_csv( self.__bme280_csv )
+                    for unix_epoch_time in dataFrame['unix_epoch_time']:
+                        match = bme280DataFrame[
+                            ( bme280DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
+                            ( bme280DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
+                        ].copy()
+    
+                        if not match.empty:
+                            match['bme280_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                            match                                 = match.loc[match['bme280_unix_epoch_time_delta'].idxmin()]
+                            match                                 = match.to_frame().T
+                            match_row                             = match.rename(
+                                columns={
+                                    'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                    'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                    'temperature'      : 'bme280_temperature'      ,
+                                    'pressure'         : 'bme280_pressure'         ,
+                                    'humidity'         : 'bme280_humidity'
+                                }
+                            )
+                            matchTolerance.append( match_row )
+    
+                        else:
+                            empty_row = pandas.DataFrame( { col : [numpy.nan] for col in bme280DataFrame.columns } )
+                            empty_row = empty_row.rename(
+                                columns={
+                                    'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                    'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                    'temperature'      : 'bme288_temperature'      ,
+                                    'pressure'         : 'bme280_pressure'         ,
+                                    'humidity'         : 'bme280_humidity'
+                                }
+                            )
+                            matchTolerance.append( empty_row )
+                    concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                    dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+    
+                if self.__mpu6050_csv is not None:
+                    matchTolerance  = []
+                    mpu6050DataFrame = pandas.read_csv( self.__mpu6050_csv )
+                    for unix_epoch_time in dataFrame['unix_epoch_time']:
+                        match = mpu6050DataFrame[
+                            ( mpu6050DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
+                            ( mpu6050DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
+                        ].copy()
+    
+                        if not match.empty:
+                            match['mpu6050_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                            match                                 = match.loc[match['mpu6050_unix_epoch_time_delta'].idxmin()]
+                            match                                 = match.to_frame().T
+                            match_row                             = match.rename(
+                                columns={
+                                    'elapsed_time'     : 'mpu6050_elapsed_time'     ,
+                                    'start_epoch_time' : 'mpu6050_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'mpu6050_unix_epoch_time'  ,
+                                    'ax'               : 'mpu6050_ax'               ,
+                                    'ay'               : 'mpu6050_ay'               ,
+                                    'az'               : 'mpu6050_az'               ,
+                                    'gx'               : 'mpu6050_gx'               ,
+                                    'gy'               : 'mpu6050_gy'               ,
+                                    'gz'               : 'mpu6050_gz'               ,
+                                    'temperature'      : 'mpu6050_temperature'
+                                }
+                            )
+                            matchTolerance.append( match_row )
+    
+                        else:
+                            empty_row = pandas.DataFrame( { col : [numpy.nan] for col in mpu6050DataFrame.columns } )
+                            empty_row = empty_row.rename(
+                                columns={
+                                    'elapsed_time'     : 'mpu6050_elapsed_time'     ,
+                                    'start_epoch_time' : 'mpu6050_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'mpu6050_unix_epoch_time'  ,
+                                    'ax'               : 'mpu6050_ax'               ,
+                                    'ay'               : 'mpu6050_ay'               ,
+                                    'az'               : 'mpu6050_az'               ,
+                                    'gx'               : 'mpu6050_gx'               ,
+                                    'gy'               : 'mpu6050_gy'               ,
+                                    'gz'               : 'mpu6050_gz'               ,
+                                    'temperature'      : 'mpu6050_temperature'
+                                }
+                            )
+                            matchTolerance.append( empty_row )
+                    concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                    dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+    
+                if self.__mpu9250_csv is not None:
+                    matchTolerance  = []
+                    mpu9250DataFrame = pandas.read_csv( self.__mpu9250_csv )
+                    for unix_epoch_time in dataFrame['unix_epoch_time']:
+                        match = mpu9250DataFrame[
+                            ( mpu9250DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
+                            ( mpu9250DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
+                        ].copy()
+    
+                        if not match.empty:
+                            match['mpu9250_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                            match                                 = match.loc[match['mpu9250_unix_epoch_time_delta'].idxmin()]
+                            match                                 = match.to_frame().T
+                            match_row                             = match.rename(
+                                columns={
+                                    'elapsed_time'     : 'mpu9250_elapsed_time'     ,
+                                    'start_epoch_time' : 'mpu9250_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'mpu9250_unix_epoch_time'  ,
+                                    'accel'            : 'mpu9250_accel'            ,
+                                    'gyro'             : 'mpu9250_gyro'             ,
+                                    'magnet'           : 'mpu9250_magnet'
+                                }
+                            )
+                            matchTolerance.append( match_row )
+    
+                        else:
+                            empty_row = pandas.DataFrame( { col : [numpy.nan] for col in mpu9250DataFrame.columns } )
+                            empty_row = empty_row.rename(
+                                columns={
+                                    'elapsed_time'     : 'mpu9250_elapsed_time'     ,
+                                    'start_epoch_time' : 'mpu9250_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'mpu9250_unix_epoch_time'  ,
+                                    'accel'            : 'mpu9250_accel'            ,
+                                    'gyro'             : 'mpu9250_gyro'             ,
+                                    'magnet'           : 'mpu9250_magnet'
+                                }
+                            )
+                            matchTolerance.append( empty_row )
+                    concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                    dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+                    
+            if self.__excel_en:
+                self.__output_to_excel( "movie" , basename + "_analyse.xlsx" , dataFrame )
+                #dataFrame.to_excel(  basename + "_analyse.xlsx" , index=False )
+            else:
+                dataFrame.to_csv  (  basename + "_analyse.csv"  , index=False )
 
-                    if not match.empty:
-                        match['bme280_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
-                        match                                 = match.loc[match['bme280_unix_epoch_time_delta'].idxmin()]
-                        match                                 = match.to_frame().T
-                        match_row                             = match.rename(
-                            columns={
-                                'elapsed_time'     : 'bme280_elapsed_time'     ,
-                                'start_epoch_time' : 'bme280_start_epoch_time' ,
-                                'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
-                                'temperature'      : 'bme280_temperature'      ,
-                                'pressure'         : 'bme280_pressure'         ,
-                                'humidity'         : 'bme280_humidity'
-                            }
-                        )
-                        matchTolerance.append( match_row )
-
-                    else:
-                        empty_row = pandas.DataFrame( { col : [numpy.nan] for col in bme280DataFrame.columns } )
-                        empty_row = empty_row.rename(
-                            columns={
-                                'elapsed_time'     : 'bme280_elapsed_time'     ,
-                                'start_epoch_time' : 'bme280_start_epoch_time' ,
-                                'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
-                                'temperature'      : 'bme288_temperature'      ,
-                                'pressure'         : 'bme280_pressure'         ,
-                                'humidity'         : 'bme280_humidity'
-                            }
-                        )
-                        matchTolerance.append( empty_row )
-                concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
-                dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
-
-            if self.__mpu6050_csv is not None:
-                matchTolerance  = []
-                mpu6050DataFrame = pandas.read_csv( self.__mpu6050_csv )
-                for unix_epoch_time in dataFrame['unix_epoch_time']:
-                    match = mpu6050DataFrame[
-                        ( mpu6050DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
-                        ( mpu6050DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
-                    ].copy()
-
-                    if not match.empty:
-                        match['mpu6050_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
-                        match                                 = match.loc[match['mpu6050_unix_epoch_time_delta'].idxmin()]
-                        match                                 = match.to_frame().T
-                        match_row                             = match.rename(
-                            columns={
-                                'elapsed_time'     : 'mpu6050_elapsed_time'     ,
-                                'start_epoch_time' : 'mpu6050_start_epoch_time' ,
-                                'unix_epoch_time'  : 'mpu6050_unix_epoch_time'  ,
-                                'ax'               : 'mpu6050_ax'               ,
-                                'ay'               : 'mpu6050_ay'               ,
-                                'az'               : 'mpu6050_az'               ,
-                                'gx'               : 'mpu6050_gx'               ,
-                                'gy'               : 'mpu6050_gy'               ,
-                                'gz'               : 'mpu6050_gz'               ,
-                                'temperature'      : 'mpu6050_temperature'
-                            }
-                        )
-                        matchTolerance.append( match_row )
-
-                    else:
-                        empty_row = pandas.DataFrame( { col : [numpy.nan] for col in mpu6050DataFrame.columns } )
-                        empty_row = empty_row.rename(
-                            columns={
-                                'elapsed_time'     : 'mpu6050_elapsed_time'     ,
-                                'start_epoch_time' : 'mpu6050_start_epoch_time' ,
-                                'unix_epoch_time'  : 'mpu6050_unix_epoch_time'  ,
-                                'ax'               : 'mpu6050_ax'               ,
-                                'ay'               : 'mpu6050_ay'               ,
-                                'az'               : 'mpu6050_az'               ,
-                                'gx'               : 'mpu6050_gx'               ,
-                                'gy'               : 'mpu6050_gy'               ,
-                                'gz'               : 'mpu6050_gz'               ,
-                                'temperature'      : 'mpu6050_temperature'
-                            }
-                        )
-                        matchTolerance.append( empty_row )
-                concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
-                dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
-
-            if self.__mpu9250_csv is not None:
-                matchTolerance  = []
-                mpu9250DataFrame = pandas.read_csv( self.__mpu9250_csv )
-                for unix_epoch_time in dataFrame['unix_epoch_time']:
-                    match = mpu9250DataFrame[
-                        ( mpu9250DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
-                        ( mpu9250DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
-                    ].copy()
-
-                    if not match.empty:
-                        match['mpu9250_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
-                        match                                 = match.loc[match['mpu9250_unix_epoch_time_delta'].idxmin()]
-                        match                                 = match.to_frame().T
-                        match_row                             = match.rename(
-                            columns={
-                                'elapsed_time'     : 'mpu9250_elapsed_time'     ,
-                                'start_epoch_time' : 'mpu9250_start_epoch_time' ,
-                                'unix_epoch_time'  : 'mpu9250_unix_epoch_time'  ,
-                                'accel'            : 'mpu9250_accel'            ,
-                                'gyro'             : 'mpu9250_gyro'             ,
-                                'magnet'           : 'mpu9250_magnet'
-                            }
-                        )
-                        matchTolerance.append( match_row )
-
-                    else:
-                        empty_row = pandas.DataFrame( { col : [numpy.nan] for col in mpu9250DataFrame.columns } )
-                        empty_row = empty_row.rename(
-                            columns={
-                                'elapsed_time'     : 'mpu9250_elapsed_time'     ,
-                                'start_epoch_time' : 'mpu9250_start_epoch_time' ,
-                                'unix_epoch_time'  : 'mpu9250_unix_epoch_time'  ,
-                                'accel'            : 'mpu9250_accel'            ,
-                                'gyro'             : 'mpu9250_gyro'             ,
-                                'magnet'           : 'mpu9250_magnet'
-                            }
-                        )
-                        matchTolerance.append( empty_row )
-                concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
-                dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
-
-            dataFrame.to_csv(  basename + "_analyse.csv" , index=False )
-            self.__movie_gen( dataFrame )
+            if self.__movieFile is not None:
+                self.__movie_gen( dataFrame )
 
     def __movie_gen( self , dataFrame ):
         print("[Info] Start the __movie_gen function.")
         os.makedirs( './tmp' , exist_ok=True )
         self.__separation_h264_to_jpeg( self.__movieFile )
-        self.__add_sensor_frame( dataFrame )
-        self.__merge_jpeg_to_h264( self.__movieFile + ".sensor.h264" , str(self.__framerate) )
+        cap       = cv2.VideoCapture( self.__movieFile )
+        framerate = cap.get( cv2.CAP_PROP_FPS )
+        self.__add_sensor_frame( dataFrame , framerate )
+        self.__merge_jpeg_to_h264( self.__movieFile + ".sensor.h264" , str(framerate) )
         self.__conver_h264_to_mp4( self.__movieFile + ".sensor.h264" )
         shutil.rmtree('./tmp')  
 
@@ -742,13 +819,14 @@ class SensorAnalyzerImpl:
         else:
             print("[Warn] apt install -y ffmpeg")        
 
-    def __add_sensor_frame( self , dataFrame ):
+    def __add_sensor_frame( self , dataFrame , framerate ):
         print("[Info] Start the __add_sensor_frame function.")
         imgFiles = sorted(glob.glob('tmp/frame_*.jpg'))
         frame_index = 0
         for imgFile in imgFiles:
             image    = cv2.imread(imgFile)
             text     =        "DATE                   : " + str( dataFrame.iloc[frame_index]['current_time']       ) + "\n"
+            text     = text + "FRAMERATE             : " + str( framerate                                         ) + "\n"
             if self.__bme280_csv  is not None:                
                 text = text + "BME280 TEMPERATURE : " + str( dataFrame.iloc[frame_index]['bme280_temperature'] ) + "\n"
                 text = text + "BME280 PRESSURE     : " + str( dataFrame.iloc[frame_index]['bme280_pressure']    ) + "\n"
