@@ -31,35 +31,39 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 ########################################################################
 class SensorWrapper:
 
+    bme280_startedFld  = False
+    mpu6050_startedFld = False
+    mpu9250_startedFld = False
+
     def __init__( self , argv ):
         print("[Info] Create an instance of the SensorWrapper class.")
-        self.argv            = argv
-        self.__bme280_fa     = None
-        self.__mpu6050_fa    = None
-        self.__mpu9250_fa    = None
-        self.__bus           = None
-        self.__mode          = None
-        self.__output_dir    = None
-        self.__camera_en     = None
-        self.__bme280_en     = None
-        self.__mpu6050_en    = None
-        self.__mpu9250_en    = None
-        self.__framerate     = None
-        self.__bitrate       = None
-        self.__width         = None
-        self.__height        = None
-        self.__bme280_addr   = None
-        self.__mpu6050_addr  = None
-        self.__bme280_csv    = None
-        self.__mpu6050_csv   = None
-        self.__mpu9250_csv   = None
-        self.__mp4_en        = None
-        self.__altitude_en   = None
-        self.__bme280_graph  = None
-        self.__mpu6050_graph = None
-        self.__mpu9250_graph = None
-        self.__tolerance     = None
-        self.__excel_en      = None
+        self.argv                 = argv
+        self.__bme280_fa          = None
+        self.__mpu6050_fa         = None
+        self.__mpu9250_fa         = None
+        self.__bus                = None
+        self.__mode               = None
+        self.__output_dir         = None
+        self.__camera_en          = None
+        self.__bme280_en          = None
+        self.__mpu6050_en         = None
+        self.__mpu9250_en         = None
+        self.__framerate          = None
+        self.__bitrate            = None
+        self.__width              = None
+        self.__height             = None
+        self.__bme280_addr        = None
+        self.__mpu6050_addr       = None
+        self.__bme280_csv         = None
+        self.__mpu6050_csv        = None
+        self.__mpu9250_csv        = None
+        self.__mp4_en             = None
+        self.__altitude_en        = None
+        self.__bme280_graph       = None
+        self.__mpu6050_graph      = None
+        self.__mpu9250_graph      = None
+        self.__tolerance          = None
+        self.__excel_en           = None
 
     def __handler( self , signum , frame ):
         self.__bme280_fa .close()
@@ -161,6 +165,8 @@ class SensorWrapper:
             self.__generate_empty_csvFile( bme280CsvFile , data )
             self.__bme280_fa , bme280_fw = self.__get_csvFile( bme280CsvFile )
             self.__bme280Impl = BME280Impl  ( self.__bus , self.__bme280_addr , bme280_fw  )
+        else:
+             SensorWrapper.bme280_startedFld = True
 
         if self.__mpu6050_en:
             print("[Info] Activate the MPU6050.")
@@ -181,6 +187,8 @@ class SensorWrapper:
             self.__generate_empty_csvFile( mpu6050CsvFile ,data )
             self.__mpu6050_fa , mpu6050_fw = self.__get_csvFile( mpu6050CsvFile )
             self.__mpu6050Impl = MPU6050Impl( self.__bus , self.__mpu6050_addr , mpu6050_fw )
+        else:
+            SensorWrapper.mpu6050_startedFld = True
 
         if self.__mpu9250_en:
             print("[Info] Activate the MPU9250.")
@@ -197,6 +205,8 @@ class SensorWrapper:
             self.__generate_empty_csvFile( mpu9250CsvFile , data )
             self.__mpu9250_fa , mpu9250_fw = self.__get_csvFile( mpu9250CsvFile )
             self.__mpu9250Impl = MPU9250Impl( mpu9250_fw )
+        else:
+            SensorWrapper.mpu9250_startedFld = True
 
     def __generate_empty_csvFile( self , csvFileName , data ):
         print("[Info] Create the  " + csvFileName + ".")
@@ -274,7 +284,12 @@ class CameraModuleImpl:
         self.__height      = height
 
     def __start_camera_module( self ):
-        time.sleep(1)
+        while True:
+            if  SensorWrapper.mpu9250_startedFld and  SensorWrapper.mpu9250_startedFld and  SensorWrapper.mpu9250_startedFld:
+                break
+            else:
+                time.sleep(1)
+
         subprocess.run(
             "libcamera-vid --framerate "    + str( self.__framerate) +
             " --bitrate "                   + str( self.__bitrate ) +
@@ -337,6 +352,9 @@ class BME280Impl:
                 self.__temperature = None
                 self.__pressure    = None
                 self.__humidity    = None
+                if SensorWrapper.bme280_startedFld is False:
+                    print("[Info] BME280 Started.")
+                    SensorWrapper.bme280_startedFld = True
             time.sleep(0.0005)
 
     def doBME280Impl(self):
@@ -424,6 +442,9 @@ class MPU6050Impl:
                 self.__gy          = None
                 self.__gz          = None
                 self.__temperature = None
+                if SensorWrapper.mpu6050_startedFld is False:
+                    print("[Info] MPU6050 Started.")
+                    SensorWrapper.mpu6050_startedFld = True
             time.sleep(0.0005)
 
     def doMPU6050Impl(self):
@@ -474,6 +495,9 @@ class MPU9250Impl:
                 self.__accel  = None
                 self.__gyro   = None
                 self.__magnet = None
+                if SensorWrapper.mpu9250_startedFld is False:
+                    print("[Info] MPU9250 Started.")
+                    SensorWrapper.mpu9250_startedFld = True
             time.sleep(0.0005)
 
     def doMPU9250Impl(self):
@@ -562,6 +586,7 @@ class SensorAnalyzerImpl:
             #dataFrame.to_excel(  basename + "_altitude.xlsx" , index=False )
         else:
             dataFrame.to_csv  (  basename + "_altitude.csv"  , index=False )
+        return dataFrame
 
     def __output_to_excel( self , sheetName , fileName , dataFrame ):
         wb              = openpyxl.Workbook()
@@ -620,7 +645,7 @@ class SensorAnalyzerImpl:
         Tk  = Tc + 273.15  # 気温をKに変換
         es  = 6.112 * math.exp( (17.67*Tc) / (Tc+243.5) ) # 飽和水蒸気圧(Tetensの式)es[hPa]
         e   = (RH / 100.0) * es                           # 実際の水蒸気圧e[hPa]
-        r   = '(0.622*e) / (P-e)) / 1000                  # 混合比r[kg/kg]
+        r   = ((0.622*e) / (P-e)) / 1000                  # 混合比r[kg/kg]
         Tkv = Tk * ( 1 + 0.61 * r )                       # 仮想温度[K]
         return Tkv
 
@@ -636,7 +661,7 @@ class SensorAnalyzerImpl:
     def __generate_mpu6050_graph( self ):
         print("[Info] Start the __generate_mpu6050_graph function.")
 
-    def __analyse_frame_sync( self ):
+    def __analyse_frame_sync( self , bme280DataFrame ):
         print("[Info] Start the __analyse_frame_sync function.")
         if self.__movie_csv is not None:
             dataFrame                     = pandas.read_csv( self.__movie_csv )
@@ -658,7 +683,12 @@ class SensorAnalyzerImpl:
 
                 if self.__bme280_csv  is not None:
                     matchTolerance  = []
-                    bme280DataFrame = pandas.read_csv( self.__bme280_csv )
+
+                    if bme280DataFrame is None:
+                        bme280DataFrame = pandas.read_csv( self.__bme280_csv )
+                    else:
+                        bme280DataFrame = bme280DataFrame.drop(columns=['current_time'])
+
                     for unix_epoch_time in dataFrame['unix_epoch_time']:
                         match = bme280DataFrame[
                             ( bme280DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
@@ -669,30 +699,57 @@ class SensorAnalyzerImpl:
                             match['bme280_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
                             match                                 = match.loc[match['bme280_unix_epoch_time_delta'].idxmin()]
                             match                                 = match.to_frame().T
-                            match_row                             = match.rename(
-                                columns={
-                                    'elapsed_time'     : 'bme280_elapsed_time'     ,
-                                    'start_epoch_time' : 'bme280_start_epoch_time' ,
-                                    'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
-                                    'temperature'      : 'bme280_temperature'      ,
-                                    'pressure'         : 'bme280_pressure'         ,
-                                    'humidity'         : 'bme280_humidity'
-                                }
-                            )
+                            if self.__altitude_en:
+                                match_row                             = match.rename(
+                                    columns={
+                                        'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                        'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                        'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                        'temperature'      : 'bme280_temperature'      ,
+                                        'pressure'         : 'bme280_pressure'         ,
+                                        'humidity'         : 'bme280_humidity'         ,
+                                        'altitude'         : 'bme280_altitude'
+                                    }
+                                )
+                            else:
+                                match_row                             = match.rename(
+                                    columns={
+                                        'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                        'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                        'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                        'temperature'      : 'bme280_temperature'      ,
+                                        'pressure'         : 'bme280_pressure'         ,
+                                        'humidity'         : 'bme280_humidity'
+                                    }
+                                )
                             matchTolerance.append( match_row )
     
                         else:
                             empty_row = pandas.DataFrame( { col : [numpy.nan] for col in bme280DataFrame.columns } )
-                            empty_row = empty_row.rename(
-                                columns={
-                                    'elapsed_time'     : 'bme280_elapsed_time'     ,
-                                    'start_epoch_time' : 'bme280_start_epoch_time' ,
-                                    'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
-                                    'temperature'      : 'bme288_temperature'      ,
-                                    'pressure'         : 'bme280_pressure'         ,
-                                    'humidity'         : 'bme280_humidity'
-                                }
-                            )
+                            if self.__altitude_en:
+                                empty_row = empty_row.rename(
+                                    columns={
+                                        'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                        'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                        'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                        'temperature'      : 'bme280_temperature'      ,
+                                        'pressure'         : 'bme280_pressure'         ,
+                                        'humidity'         : 'bme280_humidity'         ,
+                                        'altitude'         : 'bme280_altitude'
+                                    }
+                                )
+                            else:
+                                empty_row = empty_row.rename(
+                                    columns={
+                                        'elapsed_time'     : 'bme280_elapsed_time'     ,
+                                        'start_epoch_time' : 'bme280_start_epoch_time' ,
+                                        'unix_epoch_time'  : 'bme280_unix_epoch_time'  ,
+                                        'temperature'      : 'bme280_temperature'      ,
+                                        'pressure'         : 'bme280_pressure'         ,
+                                        'humidity'         : 'bme280_humidity'
+                                    }
+                                )
+
                             matchTolerance.append( empty_row )
                     concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
                     dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
@@ -810,6 +867,7 @@ class SensorAnalyzerImpl:
     def __separation_h264_to_jpeg( self , movieFileName ):
         print("[Info] Start the __separation_h264_to_jpeg function.")
         if shutil.which("ffmpeg") is not None:
+            print("[Info] ffmpeg -i " + movieFileName + " -qscale:v 2 tmp/frame_%08d.jpg")
             subprocess.run(
                 "ffmpeg -i " + movieFileName +
                 " -qscale:v 2 tmp/frame_%08d.jpg" ,
@@ -828,7 +886,9 @@ class SensorAnalyzerImpl:
             image    = cv2.imread(imgFile)
             text     =        "DATE                   : " + str( dataFrame.iloc[frame_index]['current_time']       ) + "\n"
             text     = text + "FRAMERATE             : " + str( framerate                                         ) + "\n"
-            if self.__bme280_csv  is not None:                
+            if self.__bme280_csv  is not None:
+                if self.__altitude_en:
+                    text = text + "ALTITUDE               : " + str( dataFrame.iloc[frame_index]['bme280_altitude'] ) + "\n"
                 text = text + "BME280 TEMPERATURE : " + str( dataFrame.iloc[frame_index]['bme280_temperature'] ) + "\n"
                 text = text + "BME280 PRESSURE     : " + str( dataFrame.iloc[frame_index]['bme280_pressure']    ) + "\n"
                 text = text + "BME280 HUMIDLY       : " + str( dataFrame.iloc[frame_index]['bme280_humidity']    ) + "\n"
@@ -859,6 +919,10 @@ class SensorAnalyzerImpl:
     def __merge_jpeg_to_h264( self , movieFileName , framerate ):
         print("[Info] Start the __merge_jpeg_to_h264 function.")
         if shutil.which("ffmpeg") is not None:
+            print(
+                "[Info] ffmpeg -framerate " + str(framerate) +
+                " -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y " + movieFileName
+            )
             subprocess.run(
                 "ffmpeg -framerate " + str(framerate) +
                 " -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y " + movieFileName ,
@@ -874,12 +938,13 @@ class SensorAnalyzerImpl:
         print("[Info] Start the doSensorAnalyzerImplImpl function.")
         try:
             threadList = []
+            bme280DataFrame = None
             if self.__mp4_en:
                 threadList.append( threading.Thread
                     ( args=( self.__movieFile , ) , target=self.__convert_h264_to_mp4 )
                 )
             if self.__altitude_en:
-                threadList.append( threading.Thread( target=self.__generate_alititude_csv ) )
+                bme280DataFrame = self.__generate_alititude_csv()
             if self.__bme280_graph_en  :
                 threadList.append( threading.Thread( target=self.__generate_bme280_graph  ) )
             if self.__mpu6050_graph_en :
@@ -887,7 +952,12 @@ class SensorAnalyzerImpl:
             if self.__mpu9250_graph_en :
                 threadList.append( threading.Thread( target=self.__generate_mpu9250_graph ) )
             if self.__frame_sync_en    :
-                threadList.append( threading.Thread( target=self.__analyse_frame_sync     ) )
+                threadList.append(
+                    threading.Thread(
+                        args   = ( bme280DataFrame , )   ,
+                        target = self.__analyse_frame_sync
+                    )
+                )
             for signleThread in threadList:
                 signleThread.start()
             for signleThread in threadList:
@@ -899,7 +969,7 @@ class SensorAnalyzerImpl:
 
 def main(argv):
     print("[Info] Start the main function.")
-    sw = SensorWrapper(argv)
+    sw = SensorWrapper( argv )
     sw.doSensorWrapper()
 
 if __name__ == "__main__":
