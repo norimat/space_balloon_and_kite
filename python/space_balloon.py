@@ -620,8 +620,8 @@ class SensorAnalyzerImpl:
         Tk  = Tc + 273.15  # 気温をKに変換
         es  = 6.112 * math.exp( (17.67*Tc) / (Tc+243.5) ) # 飽和水蒸気圧(Tetensの式)es[hPa]
         e   = (RH / 100.0) * es                           # 実際の水蒸気圧e[hPa]
-        r   = (0.622*e) / (P-e)                           # 混合比r[g/kg]
-        Tkv = Tk * ( 1 + 0.61 * r / 1000 )                # 仮想温度[K]
+        r   = '(0.622*e) / (P-e)) / 1000                  # 混合比r[kg/kg]
+        Tkv = Tk * ( 1 + 0.61 * r )                       # 仮想温度[K]
         return Tkv
 
     def __generate_bme280_graph( self ):
