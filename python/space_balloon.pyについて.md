@@ -50,34 +50,34 @@ space_balloon.pyは実行開始時および実行中に有効機能に応じて�
 前述した入力は実行オプションで設定する。
 以下にオプション一覧を示す。
 
-| オプション                                 |モード | 説明                                                                 |
-|--------------------------------------------|-------|----------------------------------------------------------------------|
-|`--help`                                    |       |                                                                      |
-|`--mode <モード番号>`                       |       |例: ``|
-|`--output_dir <出力先ディレクトリ名>`       |       |例: ``|
-|`--camera`                                  |       |                                                                      |
-|`--bme280`                                  |       |                                                                      |
-|`--mpu6050`                                 |       |                                                                      |
-|`--mpu9250`                                 |       |                                                                      |
-|`--framerate <フレームレート>`              |       |例: ``|
-|`--bitrate <ビットレート>`                  |       |例: ``|
-|`--width <水平サイズ>`                      |       |例: ``|
-|`--height <垂直サイズ>`                     |       |例: ``|
-|`--bme280_addr <BME280のデバイスアドレス>`  |       |例: ``|
-|`--mpu6050_addr <MPU6050のデバイスアドレス>`|       |例: ``|
-|`--frame_sync`                              |       |                                                                      |
-|`--movie_csv <動画のcsvファイル>`           |       |例: ``|
-|`--bme280_csv <BME280のcsvファイル>`        |       |例: ``|
-|`--mpu6050_csv <MPU6050のcsvファイル>`      |       |例: ``|
-|`--mpu9250_csv <MPU9250のcsvファイル>`      |       |例: ``|
-|`--mp4`                                     |       |                                                                      |
-|`--altitude`                                |       |                                                                      |
-|`--bme280_graph`                            |       |                                                                      |
-|`--mpu6050_graph`                           |       |                                                                      |
-|`--mpu9250_graph`                           |       |                                                                      |
-|`--movie <動画ファイル名>`                  |       |例: ``|
-|`--tolerance <許容誤差>`                    |       |例: ``|
-|`--excel`                                   |       |                                                                      |
+| オプション                                 | モード                    | デフォルト値   | 説明                       |
+|--------------------------------------------|---------------------------|----------------|--------------------------- |
+|`--help`                                    | -                         | -              | ヘルプメッセージを表示する |
+|`--mode <モード番号>`                       | -                         | 0              | モード選択<br>センサー取得モード:0<br>センサーデータ解析モード:1<br>例: `--mode 0` |
+|`--output_dir <出力先ディレクトリ名>`       | センサー取得モード        | ./             | センサーから取得したデータの出力先ディレクトリを指定する<br>ディレクトリは事前に作成しておく必要がある<br>例: `--output_dir ./output` |
+|`--camera`                                  | センサー取得モード        | FalseでOFF     | カメラモジュールによる撮影を有効化するイネーブルオプション |
+|`--framerate <フレームレート>`              | センサー取得モード        | 30             | 撮影時のフレームレート設定<br>例: `--framerate 30` |
+|`--bitrate <ビットレート>`                  | センサー取得モード        | 8000000(8Mbps) | 撮影時のビットレート設定<br>ビット単位で指定する<br>例: `--bitrate 8000000` |
+|`--width <水平サイズ>`                      | センサー取得モード        | 1920           | 撮影時の水平サイズ設定<br>例: `--width 1920` |
+|`--height <垂直サイズ>`                     | センサー取得モード        | 1080           | 撮影時の垂直サイズ設定<br>例: `--height 1080` |
+|`--bme280`                                  | センサー取得モード        | FalseでOFF     | BME280からのデータ取得を有効化するイネーブルオプション |
+|`--mpu6050`                                 | センサー取得モード        | FalseでOFF     | MPU6050からのデータ取得を有効化するイネーブルオプション |
+|`--mpu9250`                                 | センサー取得モード        | FalseでOFF     | MPU9250からのデータ取得を有効化するイネーブルオプション |
+|`--bme280_addr <BME280のデバイスアドレス>`  | センサー取得モード        | 0x76           | BME280のデバイスアドレス<br>16進数で先頭に0xをつける必要あり<br>例: `--bme280_addr 0x76` |
+|`--mpu6050_addr <MPU6050のデバイスアドレス>`| センサー取得モード        | 0x68           | MPU6050のデバイスアドレス<br>16進数で先頭に0xをつける必要あり<br>例: `--mpu6050_addr 0x68` |
+|`--frame_sync`                              | センサーデータ解析モード  | FalseでOFF     | センサー取得モードにおいて、カメラモジュールから取得したデータと他センサーの計測データを同期する<br>--movie_csvは必須で指定しないと何も実行しせず、他--bme280_csv、--altitude、--mpu6050_csv、--mpu9250_csv、--movieおよび--toleranceを設定しカスタマイズ可能 |
+|`--movie_csv <動画のcsvファイル>`           | センサーデータ解析モード  | FalseでOFF     | センサー取得モードにおいて取得した各フレームのタイムスタンプ出力ファイルを指定する<br>例: `--movie_csv video.csv` |
+|`--bme280_csv <BME280のcsvファイル>`        | センサーデータ解析モード  | -              | センサー取得モードにおいて、BME280から取得した計測データのcsvファイル名<br>例: `--bme280_csv ./bme280.csv` |
+|`--mpu6050_csv <MPU6050のcsvファイル>`      | センサーデータ解析モード  | -              | センサー取得モードにおいて、MPU6050から取得した計測データのcsvファイル名<br>例: `--mpu6050_csv ./mpu6050.csv` |
+|`--mpu9250_csv <MPU9250のcsvファイル>`      | センサーデータ解析モード  | -              | センサー取得モードにおいて、MPU9250から取得した計測データのcsvファイル名<br>例: `--mpu9250_csv ./mpu9250.csv` |
+|`--mp4`                                     | センサーデータ解析モード  | FalseでOFF     | H264形式動画ファイルをMP4形式で出力<br>--movieオプションで動画ファイル名を指定する<br>--frame_syncオプションを有効にすることで同期データを加えた動画もMP4で出力する |
+|`--altitude`                                | センサーデータ解析モード  | FalseでOFF     | BME280で取得したデータをもとに高度を算出する<br>--bme280_csvオプションでBME280計測データを指定する必要がある<br>--frame_syncオプションで本オプションを有効にすれば高度データも追加する |
+|`--bme280_graph`                            | センサーデータ解析モード  | FalseでOFF     | 機能未実装のため指定しても動作しない |
+|`--mpu6050_graph`                           | センサーデータ解析モード  | FalseでOFF     | 機能未実装のため指定しても動作しない |
+|`--mpu9250_graph`                           | センサーデータ解析モード  | FalseでOFF     | 機能未実装のため指定しても動作しない |
+|`--movie <動画ファイル名>`                  | センサーデータ解析モード  | -              | センサー取得モードにおいて、カメラモジュールから取得したH264形式動画ファイルを指定する<br>例: `--movie video.h264` |
+|`--tolerance <許容誤差>`                    | センサーデータ解析モード  | 0.032          | --frame_syncオプションでフレーム毎の取得時間とセンサー取得時間で同期を取る際に取得時間で発生する時間の誤差許容範囲を指定する<br>秒単位で指定する<br>例: `--tolerance 0.015` |
+|`--excel`                                   | センサーデータ解析モード  | FalseでOFF     | センサーデータ解析モードで出力する加工csvファイルをcsvでなく.xlsx形式で出力する |
 
 #### 1-3-3. csvファイルおよびDataFrame
 
@@ -749,6 +749,13 @@ Codename:       bullseye
 Python実行環境を分離し管理しやすいように仮想環境を使用する。
 これによりバージョンが異なるライブラリや依存関係を使い分けやすくする。
 
+今回、使用するPythonバージョンは以下となっている。
+
+```text
+$ python -V
+Python 3.9.2
+```
+
 仮想環境は以下コマンドで作成できる。
 
 ```text
@@ -764,10 +771,23 @@ $ source python_space_balloon/bin/activate
 有効化後、space_balloon.pyを実行するために必要なライブラリをインストールする。
 
 ```text
+$ sudo apt install -y libjpeg-dev
+$ sudo apt install -y zlib1g-dev
+$ sudo apt install -y libfreetype6-dev
+$ sudo apt install -y liblcms2-dev
+$ sudo apt install -y libopenjpeg-dev
+$ sudo apt install -y libtiff5-dev
+$ sudo apt install -y tk-dev
+$ sudo apt install -y tcl-dev
+$ sudo apt install -y libatlas-base-dev
+$ sudo apt install -y gfortran
+$ sudo apt install -y libopenblas-dev
+$ pip install --upgrade pip
 $ pip install smbus2
 $ pip install FaBo9Axis_MPU9250
 $ pip install smbus
 $ pip install pandas
+$ pip install numpy
 $ pip install matplotlib
 $ pip install opencv-python
 $ pip install openpyxl
@@ -839,6 +859,21 @@ $ sudo エディタ(vi、emacsやnanoなど) /etc/samba/smb.conf
    directory mask = 0777
    read only = no
 ```
+以下コマンドでSambaのシステムを再起動し設定を読み込む。
+
+```text
+$ sudo systemctl restart smbd
+```
+
+```text
+sudo smbpasswd -a アカウント名
+New SMB password:(設定したいパスワードを入力しEnter)
+Retype new SMB password:(設定したいパスワードを入力しEnter)
+Added user アカウント名.
+```
+
+これでWindowsからエクスプローラーのアドレス欄へ「\\\IPアドレス」を入力するとアクセスできる。
+できない場合はWindowsを再起動すると解決することがある。
 
 ### IPアドレスの固定
 

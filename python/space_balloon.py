@@ -31,9 +31,9 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 ########################################################################
 class SensorWrapper:
 
-    bme280_startedFld  = False
-    mpu6050_startedFld = False
-    mpu9250_startedFld = False
+    bme280_startedFlg  = False
+    mpu6050_startedFlg = False
+    mpu9250_startedFlg = False
 
     def __init__( self , argv ):
         print("[Info] Create an instance of the SensorWrapper class.")
@@ -166,7 +166,7 @@ class SensorWrapper:
             self.__bme280_fa , bme280_fw = self.__get_csvFile( bme280CsvFile )
             self.__bme280Impl = BME280Impl  ( self.__bus , self.__bme280_addr , bme280_fw  )
         else:
-             SensorWrapper.bme280_startedFld = True
+             SensorWrapper.bme280_startedFlg = True
 
         if self.__mpu6050_en:
             print("[Info] Activate the MPU6050.")
@@ -188,7 +188,7 @@ class SensorWrapper:
             self.__mpu6050_fa , mpu6050_fw = self.__get_csvFile( mpu6050CsvFile )
             self.__mpu6050Impl = MPU6050Impl( self.__bus , self.__mpu6050_addr , mpu6050_fw )
         else:
-            SensorWrapper.mpu6050_startedFld = True
+            SensorWrapper.mpu6050_startedFlg = True
 
         if self.__mpu9250_en:
             print("[Info] Activate the MPU9250.")
@@ -206,7 +206,7 @@ class SensorWrapper:
             self.__mpu9250_fa , mpu9250_fw = self.__get_csvFile( mpu9250CsvFile )
             self.__mpu9250Impl = MPU9250Impl( mpu9250_fw )
         else:
-            SensorWrapper.mpu9250_startedFld = True
+            SensorWrapper.mpu9250_startedFlg = True
 
     def __generate_empty_csvFile( self , csvFileName , data ):
         print("[Info] Create the  " + csvFileName + ".")
@@ -285,7 +285,7 @@ class CameraModuleImpl:
 
     def __start_camera_module( self ):
         while True:
-            if  SensorWrapper.mpu9250_startedFld and  SensorWrapper.mpu9250_startedFld and  SensorWrapper.mpu9250_startedFld:
+            if  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg:
                 break
             else:
                 time.sleep(1)
@@ -352,9 +352,9 @@ class BME280Impl:
                 self.__temperature = None
                 self.__pressure    = None
                 self.__humidity    = None
-                if SensorWrapper.bme280_startedFld is False:
+                if SensorWrapper.bme280_startedFlg is False:
                     print("[Info] BME280 Started.")
-                    SensorWrapper.bme280_startedFld = True
+                    SensorWrapper.bme280_startedFlg = True
             time.sleep(0.0005)
 
     def doBME280Impl(self):
@@ -442,9 +442,9 @@ class MPU6050Impl:
                 self.__gy          = None
                 self.__gz          = None
                 self.__temperature = None
-                if SensorWrapper.mpu6050_startedFld is False:
+                if SensorWrapper.mpu6050_startedFlg is False:
                     print("[Info] MPU6050 Started.")
-                    SensorWrapper.mpu6050_startedFld = True
+                    SensorWrapper.mpu6050_startedFlg = True
             time.sleep(0.0005)
 
     def doMPU6050Impl(self):
@@ -495,9 +495,9 @@ class MPU9250Impl:
                 self.__accel  = None
                 self.__gyro   = None
                 self.__magnet = None
-                if SensorWrapper.mpu9250_startedFld is False:
+                if SensorWrapper.mpu9250_startedFlg is False:
                     print("[Info] MPU9250 Started.")
-                    SensorWrapper.mpu9250_startedFld = True
+                    SensorWrapper.mpu9250_startedFlg = True
             time.sleep(0.0005)
 
     def doMPU9250Impl(self):
