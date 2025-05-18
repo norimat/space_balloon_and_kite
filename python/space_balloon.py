@@ -3,6 +3,9 @@ import math
 import smbus2
 import bme280
 import FaBo9Axis_MPU9250
+import qwiic_icm20948
+import serial
+import pynmea2
 import subprocess
 import time
 import csv
@@ -31,9 +34,11 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 ########################################################################
 class SensorWrapper:
 
-    bme280_startedFlg  = False
-    mpu6050_startedFlg = False
-    mpu9250_startedFlg = False
+    bme280_startedFlg   = False
+    mpu6050_startedFlg  = False
+    mpu9250_startedFlg  = False
+    icm20948_startedFlg = False
+    gps_startedFlg      = False
 
     def __init__( self , argv ):
         print("[Info] Create an instance of the SensorWrapper class.")
@@ -41,35 +46,48 @@ class SensorWrapper:
         self.__bme280_fa          = None
         self.__mpu6050_fa         = None
         self.__mpu9250_fa         = None
+        self.__icm20948_fa        = None
+        self.__gps_fa             = None
         self.__bus                = None
         self.__mode               = None
         self.__output_dir         = None
         self.__camera_en          = None
+        self.__gps_en             = None
         self.__bme280_en          = None
         self.__mpu6050_en         = None
         self.__mpu9250_en         = None
+        self.__icm20948_en        = None
         self.__framerate          = None
         self.__bitrate            = None
         self.__width              = None
         self.__height             = None
+        self.__gps_port           = None
         self.__bme280_addr        = None
         self.__mpu6050_addr       = None
+        self.__icm20948_addr      = None
+        self.__gps_csv            = None
         self.__bme280_csv         = None
         self.__mpu6050_csv        = None
         self.__mpu9250_csv        = None
+        self.__icm20948_csv       = None
         self.__mp4_en             = None
         self.__altitude_en        = None
         self.__bme280_graph       = None
         self.__mpu6050_graph      = None
         self.__mpu9250_graph      = None
+        self.__icm20948_graph     = None
         self.__tolerance          = None
+        self.__tolerance_gps      = None
         self.__excel_en           = None
 
     def __handler( self , signum , frame ):
-        self.__bme280_fa .close()
-        self.__mpu6050_fa.close()
-        self.__mpu9250_fa.close()
-        self.__bus       .close()
+        self.__bme280_fa  .close()
+        self.__mpu6050_fa .close()
+        self.__mpu9250_fa .close()
+        self.__icm20948_fa.close()
+        self.__gps_fa     .close()
+        self.__bus        .close()
+        shutil.rmtree( './tmp' , ignore_errors=True )
         #sys.exit(0)
 
     def __read_args( self ):
@@ -77,55 +95,71 @@ class SensorWrapper:
         parser.add_argument( '--mode'       , '-m' , default=0     , required=True       , help="" )
         parser.add_argument( '--output_dir' , '-o' , default="./"                        , help="" )
         parser.add_argument( '--camera'            , default=False , action='store_true' , help="" )
+        parser.add_argument( '--gps'               , default=False , action='store_true' , help="" )
         parser.add_argument( '--bme280'            , default=False , action='store_true' , help="" )
         parser.add_argument( '--mpu6050'           , default=False , action='store_true' , help="" )
         parser.add_argument( '--mpu9250'           , default=False , action='store_true' , help="" )
+        parser.add_argument( '--icm20948'          , default=False , action='store_true' , help="" )
         parser.add_argument( '--framerate'         , default="30"                        , help="" )
         parser.add_argument( '--bitrate'           , default="8000000"                   , help="" )
         parser.add_argument( '--width'             , default="1920"                      , help="" )
         parser.add_argument( '--height'            , default="1080"                      , help="" )
+        parser.add_argument( '--gps_port'          , default="/dev/ttyACM0"              , help="" )
         parser.add_argument( '--bme280_addr'       , default="0x76"                      , help="" )
         parser.add_argument( '--mpu6050_addr'      , default="0x68"                      , help="" )
+        parser.add_argument( '--icm20948_addr'     , default="0x68"                      , help="" )
         parser.add_argument( '--frame_sync'        , default=False , action='store_true' , help="" )
         parser.add_argument( '--movie_csv'                                               , help="" )
+        parser.add_argument( '--gps_csv'                                                 , help="" )
         parser.add_argument( '--bme280_csv'                                              , help="" )
         parser.add_argument( '--mpu6050_csv'                                             , help="" )
         parser.add_argument( '--mpu9250_csv'                                             , help="" )
+        parser.add_argument( '--icm20948_csv'                                            , help="" )
         parser.add_argument( '--mp4'               , default=False , action='store_true' , help="" )
         parser.add_argument( '--altitude'          , default=False , action='store_true' , help="" )
         parser.add_argument( '--bme280_graph'      , default=False , action='store_true' , help="" )
         parser.add_argument( '--mpu6050_graph'     , default=False , action='store_true' , help="" )
         parser.add_argument( '--mpu9250_graph'     , default=False , action='store_true' , help="" )
+        parser.add_argument( '--icm20948_graph'    , default=False , action='store_true' , help="" )
         parser.add_argument( '--movie'                                                   , help="" )
-        parser.add_argument( '--tolerance'         , default=0.0                         , help="" )
+        parser.add_argument( '--tolerance'         , default=0.032                       , help="" )
+        parser.add_argument( '--tolerance_gps'     , default=1                           , help="" )
         parser.add_argument( '--excel'             , default=False , action='store_true' , help="" )
         try:
-            args                    = parser.parse_args()
-            self.__mode             = int( args.mode )
-            self.__output_dir       = args.output_dir
-            self.__camera_en        = int( args.camera  )
-            self.__bme280_en        = int( args.bme280  )
-            self.__mpu6050_en       = int( args.mpu6050 )
-            self.__mpu9250_en       = int( args.mpu9250 )
-            self.__framerate        = int( args.framerate )
-            self.__bitrate          = int( args.bitrate )
-            self.__width            = int( args.width )
-            self.__height           = int( args.height )
-            self.__bme280_addr      = int( args.bme280_addr  , 16 )
-            self.__mpu6050_addr     = int( args.mpu6050_addr , 16 )
-            self.__movie_csv        = args.movie_csv
-            self.__bme280_csv       = args.bme280_csv
-            self.__mpu6050_csv      = args.mpu6050_csv
-            self.__mpu9250_csv      = args.mpu9250_csv
-            self.__frame_sync_en    = int( args.frame_sync )
-            self.__mp4_en           = int( args.mp4 )
-            self.__altitude_en      = int( args.altitude )
-            self.__bme280_graph_en  = int( args.bme280_graph )
-            self.__mpu6050_graph_en = int( args.mpu6050_graph )
-            self.__mpu9250_graph_en = int( args.mpu9250_graph )
-            self.__movieFile        = args.movie
-            self.__tolerance        = float(args.tolerance)
-            self.__excel_en         = int( args.excel )
+            args                     = parser.parse_args()
+            self.__mode              = int( args.mode )
+            self.__output_dir        = args.output_dir
+            self.__camera_en         = int( args.camera  )
+            self.__gps_en            = int( args.gps  )
+            self.__bme280_en         = int( args.bme280  )
+            self.__mpu6050_en        = int( args.mpu6050 )
+            self.__mpu9250_en        = int( args.mpu9250 )
+            self.__icm20948_en       = int( args.icm20948 )
+            self.__framerate         = int( args.framerate )
+            self.__bitrate           = int( args.bitrate )
+            self.__width             = int( args.width )
+            self.__height            = int( args.height )
+            self.__gps_port          = args.gps_port
+            self.__bme280_addr       = int( args.bme280_addr   , 16 )
+            self.__mpu6050_addr      = int( args.mpu6050_addr  , 16 )
+            self.__icm20948_addr     = int( args.icm20948_addr , 16 )
+            self.__movie_csv         = args.movie_csv
+            self.__gps_csv           = args.gps_csv
+            self.__bme280_csv        = args.bme280_csv
+            self.__mpu6050_csv       = args.mpu6050_csv
+            self.__mpu9250_csv       = args.mpu9250_csv
+            self.__icm20948_csv      = args.icm20948_csv
+            self.__frame_sync_en     = int( args.frame_sync )
+            self.__mp4_en            = int( args.mp4 )
+            self.__altitude_en       = int( args.altitude )
+            self.__bme280_graph_en   = int( args.bme280_graph )
+            self.__mpu6050_graph_en  = int( args.mpu6050_graph )
+            self.__mpu9250_graph_en  = int( args.mpu9250_graph )
+            self.__icm20948_graph_en = int( args.icm20948_graph )
+            self.__movieFile         = args.movie
+            self.__tolerance         = float(args.tolerance)
+            self.__tolerance_gps     = float(args.tolerance_gps)
+            self.__excel_en          = int( args.excel )
 
         except Exception as e:
             print(e)
@@ -135,9 +169,11 @@ class SensorWrapper:
         print("[Info] Start the __generate_empty_csvFile function.")
 
         csvUnixEpochTimeStr = str( time.time() )
-        bme280CsvFile       = self.__output_dir + "/bme280_"  + csvUnixEpochTimeStr + ".csv"
-        mpu6050CsvFile      = self.__output_dir + "/mpu6050_" + csvUnixEpochTimeStr + ".csv"
-        mpu9250CsvFile      = self.__output_dir + "/mpu9250_" + csvUnixEpochTimeStr + ".csv"
+        bme280CsvFile       = self.__output_dir + "/bme280_"   + csvUnixEpochTimeStr + ".csv"
+        mpu6050CsvFile      = self.__output_dir + "/mpu6050_"  + csvUnixEpochTimeStr + ".csv"
+        mpu9250CsvFile      = self.__output_dir + "/mpu9250_"  + csvUnixEpochTimeStr + ".csv"
+        icm20948CsvFile     = self.__output_dir + "/icm20948_" + csvUnixEpochTimeStr + ".csv"
+        gpsCsvFile          = self.__output_dir + "/gps_"      + csvUnixEpochTimeStr + ".csv"
         self.__bus          = smbus2.SMBus(1)
 
         if self.__camera_en :
@@ -149,6 +185,59 @@ class SensorWrapper:
                 self.__width      ,
                 self.__height
             )
+            
+        if self.__gps_en :
+            print("[Info] Activate the IVK172 G-Mouse USB GPS.")
+            data = [
+                [
+                    'elapsed_time'       ,
+                    'start_epoch_time'   ,
+                    'unix_epoch_time'    
+                    'latitude'           ,
+                    'longitude'          ,
+                    'altitude'           
+                    'num_sats'           ,
+                    # 'datestam'           ,
+                    # 'timestamp'          ,
+                    'spd_over_grnd'      ,
+                    'true_course'        ,
+                    'true_track'         ,
+                    'spd_over_grnd_kmph' ,
+                    'pdop'               ,
+                    'hdop'               ,
+                    'vdop'               ,
+                    'num_sv_in_view'
+                ]
+            ]
+            # self.__generate_empty_csvFile( gpsCsvFile , data )
+            # self.__gps_fa , gps_fw = self.__get_csvFile( gpsCsvFile )
+            # self.__gpsModuleImpl   = GPSModuleImpl( self.__gps_port , gps_fw )
+            self.__generate_empty_csvFile( "output/gps_data.csv" , data )
+            self.__gps_fa , gps_fw = self.__get_csvFile( "output/gps_data.csv" )
+            self.__gpsModuleImpl   = GPSModuleImpl( self.__gps_port , gps_fw )
+
+        if self.__icm20948_en :
+            print("[Info] Activate the ICM-20948.")
+            data = [
+                [
+                    'elapsed_time'     ,
+                    'start_epoch_time' ,
+                    'unix_epoch_time'  ,
+                    'ax'               ,
+                    'ay'               ,
+                    'az'               ,
+                    'gx'               ,
+                    'gy'               ,
+                    'gz'               ,
+                    'mx'               ,
+                    'my'               ,
+                    'mz'               ,
+                    'temperature'
+                ]
+            ]
+            self.__generate_empty_csvFile( icm20948CsvFile , data )
+            self.__icm20948_fa , icm20948_fw = self.__get_csvFile( icm20948CsvFile )
+            self.__icm20948Impl = ICM20948Impl( self.__icm20948_addr , icm20948_fw )
 
         if self.__bme280_en :
             print("[Info] Activate the BME280.")
@@ -164,7 +253,7 @@ class SensorWrapper:
             ]
             self.__generate_empty_csvFile( bme280CsvFile , data )
             self.__bme280_fa , bme280_fw = self.__get_csvFile( bme280CsvFile )
-            self.__bme280Impl = BME280Impl  ( self.__bus , self.__bme280_addr , bme280_fw  )
+            self.__bme280Impl            = BME280Impl  ( self.__bus , self.__bme280_addr , bme280_fw  )
         else:
              SensorWrapper.bme280_startedFlg = True
 
@@ -186,7 +275,7 @@ class SensorWrapper:
             ]
             self.__generate_empty_csvFile( mpu6050CsvFile ,data )
             self.__mpu6050_fa , mpu6050_fw = self.__get_csvFile( mpu6050CsvFile )
-            self.__mpu6050Impl = MPU6050Impl( self.__bus , self.__mpu6050_addr , mpu6050_fw )
+            self.__mpu6050Impl             = MPU6050Impl( self.__bus , self.__mpu6050_addr , mpu6050_fw )
         else:
             SensorWrapper.mpu6050_startedFlg = True
 
@@ -204,7 +293,7 @@ class SensorWrapper:
             ]
             self.__generate_empty_csvFile( mpu9250CsvFile , data )
             self.__mpu9250_fa , mpu9250_fw = self.__get_csvFile( mpu9250CsvFile )
-            self.__mpu9250Impl = MPU9250Impl( mpu9250_fw )
+            self.__mpu9250Impl             = MPU9250Impl( mpu9250_fw )
         else:
             SensorWrapper.mpu9250_startedFlg = True
 
@@ -234,17 +323,23 @@ class SensorWrapper:
             signal.signal( signal.SIGINT , self.__handler )
             try:
                 if self.__bme280_en:
-                    bme280Thread  = threading.Thread( target=self.__bme280Impl.doBME280Impl)
+                    bme280Thread   = threading.Thread( target=self.__bme280Impl.doBME280Impl)
                     threadList.append(bme280Thread)
                 if self.__mpu6050_en:
-                    mpu6050Thread = threading.Thread( target=self.__mpu6050Impl.doMPU6050Impl )
+                    mpu6050Thread  = threading.Thread( target=self.__mpu6050Impl.doMPU6050Impl )
                     threadList.append(mpu6050Thread)
                 if self.__mpu9250_en:
-                    mpu9250Thread = threading.Thread( target=self.__mpu9250Impl.doMPU9250Impl )
+                    mpu9250Thread  = threading.Thread( target=self.__mpu9250Impl.doMPU9250Impl )
                     threadList.append(mpu9250Thread)
                 if self.__camera_en :
-                    cameraThread  = threading.Thread( target=self.__cameraModuleImpl.doCameraModuleImpl )
+                    cameraThread   = threading.Thread( target=self.__cameraModuleImpl.doCameraModuleImpl )
                     threadList.append(cameraThread)
+                if self.__gps_en    :
+                    gpsThread      =  threading.Thread( target=self.__gpsModuleImpl.doGpsModuleImpl )
+                    threadList.append(gpsThread)
+                if self.__icm20948_en    :
+                    icm20948Thread =  threading.Thread( target=self.__icm20948Impl.doIcm20948Impl )
+                    threadList.append(icm20948Thread)
                 for singleThread in threadList:
                     singleThread.start()
                 self.__garbage_colloction() # GC
@@ -262,12 +357,16 @@ class SensorWrapper:
                 self.__bme280_graph_en  ,
                 self.__mpu6050_graph_en ,
                 self.__mpu9250_graph_en ,
+                self.__icm20948_graph   ,
                 self.__frame_sync_en    ,
+                self.__gps_csv          ,
                 self.__bme280_csv       ,
                 self.__mpu6050_csv      ,
                 self.__mpu9250_csv      ,
+                self.__icm20948_csv     ,
                 self.__movie_csv        ,
                 self.__tolerance        ,
+                self.__tolerance_gps    ,
                 self.__excel_en
             )
             sai.doSensorAnalyzerImplImpl()
@@ -285,7 +384,7 @@ class CameraModuleImpl:
 
     def __start_camera_module( self ):
         while True:
-            if  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg:
+            if  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg and SensorWrapper.icm20948_startedFlg and SensorWrapper.gps_startedFlg:
                 break
             else:
                 time.sleep(1)
@@ -309,6 +408,140 @@ class CameraModuleImpl:
             self.__start_camera_module()
         except Exception as e:
             print(e)
+
+########################################################################
+class GPSModuleImpl:
+
+    def __init__( self , port  , csvFile ):
+        print("[Info] Create an instance of the GPSModuleImpl class.")
+        print("[Info] The port for the IVK172 G-Mouse USB GPS is " + str(port) + ".")
+        self.__start_unix_epoch_time = 0
+        self.__latitude              = None
+        self.__longitude             = None
+        self.__altitude              = None
+        self.__altitude_units        = None
+        self.__num_sats              = None
+        self.__datestamp             = None
+        self.__timestamp             = None
+        self.__spd_over_grnd         = None
+        self.__true_course           = None
+        self.__true_track            = None
+        self.__spd_over_grnd_kmph    = None
+        self.__pdop                  = None
+        self.__hdop                  = None
+        self.__vdop                  = None
+        self.__num_sv_in_view        = None
+        self.__csvFile               = csvFile
+        self.__ser                   = serial.Serial( port , 9600 , timeout=1 )
+        
+    def __read_sensor( self ):
+        frame = {"GGA": None, "RMC": None, "VTG": None, "GSA": None, "GSV": None}
+        try:
+            while True:
+            
+                raw = self.__ser.readline().decode('ascii', errors='replace').strip()
+                if not raw.startswith('$'):
+                    continue
+
+                msg = None
+                try:
+                    rawmsg = pynmea2.parse(raw)
+                    msg = rawmsg
+                except pynmea2.ParseError:
+                    pass
+                    
+                if msg is None:
+                    continue
+
+                key = msg.sentence_type
+                if key in frame:
+                    frame[key] = msg
+                if all(frame.values()):
+                    gga , rmc , vtg , gsa , gsv = ( frame["GGA"] , frame["RMC"] , frame["VTG"] , frame["GSA"] , frame["GSV"] )
+                    self.__latitude           = gga.latitude
+                    self.__longitude          = gga.longitude
+                    self.__altitude           = gga.altitude
+                    self.__altitude_units     = gga.altitude_units
+                    self.__num_sats           = gga.num_sats
+                    self.__datestamp          = rmc.datestamp
+                    self.__timestamp          = rmc.timestamp
+                    self.__spd_over_grnd      = rmc.spd_over_grnd
+                    self.__true_course        = rmc.true_course
+                    self.__true_track         = vtg.true_track
+                    self.__spd_over_grnd_kmph = vtg.spd_over_grnd_kmph
+                    self.__pdop               = gsa.pdop
+                    self.__hdop               = gsa.hdop
+                    self.__vdo                = gsa.vdop
+                    self.__num_sv_in_view     = gsv.num_sv_in_view
+                    frame = dict.fromkeys(frame, None)
+                        
+        except KeyboardInterrupt as e:
+            pass # ignore
+        finally:
+            self.__ser.close()
+   
+    def __output_csv(self):
+        while True:
+            try:
+                end_unix_epoch_time = time.time()
+                total_time = end_unix_epoch_time - self.__start_unix_epoch_time
+
+                if (self.__latitude is not None) and (self.__longitude is not None) and (self.__altitude is not None):
+
+                    data = [
+                        [
+                            total_time                   ,
+                            self.__start_unix_epoch_time ,
+                            end_unix_epoch_time          
+                            self.__latitude              ,
+                            self.__longitude             ,
+                            self.__altitude              ,
+                            self.__altitude_units        ,
+                            self.__num_sats              ,
+                            # self.__datestamp             ,
+                            # self.__timestamp             ,
+                            self.__spd_over_grnd         ,
+                            self.__true_course           ,
+                            self.__true_track            ,
+                            self.__spd_over_grnd_kmph    ,
+                            self.__pdop                  ,
+                            self.__hdop                  ,
+                            self.__vdo                   ,
+                            self.__num_sv_in_view     
+                        ]
+                    ]
+                    self.__csvFile.writerows( data )
+                    self.__latitude           = None
+                    self.__longitude          = None
+                    self.__altitude           = None
+                    self.__altitude_units     = None
+                    self.__num_sats           = None
+                    self.__datestamp          = None
+                    self.__timestamp          = None
+                    self.__spd_over_grnd      = None
+                    self.__true_course        = None
+                    self.__true_track         = None
+                    self.__spd_over_grnd_kmph = None
+                    self.__pdop               = None
+                    self.__hdop               = None
+                    self.__vdo                = None
+                    self.__num_sv_in_view     = None
+                    if SensorWrapper.gps_startedFlg is False:
+                        print("[Info] IVK172 G-Mouse USB GPS Started.")
+                        SensorWrapper.gps_startedFlg = True
+                #time.sleep(0.0005)
+            except Exception as e:
+                print(e)
+                
+    def doGpsModuleImpl(self):
+        print("[Info] Start the doGpsModuleImpl function.")
+        try:
+            self.__start_unix_epoch_time = time.time()
+            outputThread                 = threading.Thread( target=self.__output_csv )
+            outputThread.start()
+            self.__read_sensor()
+        except Exception as e:
+            pass # ignore
 
 ########################################################################
 class BME280Impl:
@@ -513,6 +746,91 @@ class MPU9250Impl:
             print(e)
 
 ########################################################################
+class ICM20948Impl:
+
+    def __init__( self , address , csvFile ):
+        print("[Info] Create an instance of the ICM20948Impl class.")
+        print("[Info] The device address of the ICM-20948 is " + str(hex(address)) )
+        self.__start_unix_epoch_time = 0
+        self.__ax                    = None
+        self.__ay                    = None
+        self.__az                    = None
+        self.__gx                    = None
+        self.__gy                    = None
+        self.__gz                    = None
+        self.__mx                    = None
+        self.__my                    = None
+        self.__mz                    = None
+        self.__temperature           = None
+        self.__csvFile               = csvFile
+        # --- I2C設定 ---
+        self.__imu                   = qwiic_icm20948.QwiicIcm20948( address )
+
+    def __read_sensor( self ):
+        if self.__imu.dataReady():
+            self.__imu.getAgmt()
+            self.__ax          = self.__imu.axRaw
+            self.__ay          = self.__imu.ayRaw
+            self.__az          = self.__imu.azRaw
+            self.__gx          = self.__imu.gxRaw
+            self.__gy          = self.__imu.gyRaw
+            self.__gz          = self.__imu.gzRaw
+            self.__mx          = self.__imu.mxRaw
+            self.__my          = self.__imu.myRaw
+            self.__mz          = self.__imu.mxRaw
+            self.__temperature = (self.__imu.tmpRaw/333.87)+21
+
+    def __output_csv(self):
+        while True:
+            end_unix_epoch_time = time.time()
+            total_time = end_unix_epoch_time - self.__start_unix_epoch_time
+            if (self.__ax is not None) and (self.__ay is not None) and (self.__az is not None) and (self.__gx is not None) and (self.__gy is not None) and (self.__gz is not None) and (self.__mx is not None) and (self.__my is not None) and (self.__mz is not None) and (self.__temperature is not None):
+                data = [
+                    [
+                        total_time                   ,
+                        self.__start_unix_epoch_time ,
+                        end_unix_epoch_time          ,
+                        self.__ax                    ,
+                        self.__ay                    ,
+                        self.__az                    ,
+                        self.__gx                    ,
+                        self.__gy                    ,
+                        self.__gz                    ,
+                        self.__mx                    ,
+                        self.__my                    ,
+                        self.__mz                    ,
+                        self.__temperature
+                    ]
+                ]
+                self.__csvFile.writerows( data )
+                self.__ax          = None
+                self.__ay          = None
+                self.__az          = None
+                self.__gx          = None
+                self.__gy          = None
+                self.__gz          = None
+                self.__mx          = None
+                self.__my          = None
+                self.__mz          = None
+                self.__temperature = None
+                if SensorWrapper.icm20948_startedFlg is False:
+                    print("[Info] ICM-20948 Started.")
+                    SensorWrapper.icm20948_startedFlg = True
+            time.sleep(0.0005)
+
+    def doIcm20948Impl(self):
+        print("[Info] Start the doIcm20948Impl function.")
+        try:
+            self.__start_unix_epoch_time = time.time()
+            outputThread                 = threading.Thread( target=self.__output_csv )
+            outputThread.start()
+            while True:
+                self.__read_sensor()
+                #time.sleep(0.001) # 1msec
+        except Exception as e:
+            print(e)
+
+########################################################################
 class SensorAnalyzerImpl:
 
     def __init__(
@@ -523,12 +841,15 @@ class SensorAnalyzerImpl:
             bme280_graph_en  ,
             mpu6050_graph_en ,
             mpu9250_graph_en ,
+            icm20948_graph   ,
             frame_sync_en    ,
             bme280_csv       ,
             mpu6050_csv      ,
             mpu9250_csv      ,
+            icm20948_csv     ,
             movie_csv        ,
             tolerance        ,
+            tolerance_gps    ,
             excel_en
     ):
         print("[Info] Create an instance of the SensorAnalyzerImpl class.")
@@ -538,12 +859,16 @@ class SensorAnalyzerImpl:
         self.__bme280_graph_en  = bme280_graph_en
         self.__mpu6050_graph_en = mpu6050_graph_en
         self.__mpu9250_graph_en = mpu9250_graph_en
+        self.__icm20948_graph   = icm20948_graph
         self.__frame_sync_en    = frame_sync_en
+        self.__gps_csv          = gps_csv
         self.__bme280_csv       = bme280_csv
         self.__mpu6050_csv      = mpu6050_csv
         self.__mpu9250_csv      = mpu9250_csv
+        self.__icm20948_csv     = icm20948_csv
         self.__movie_csv        = movie_csv
         self.__tolerance        = tolerance
+        self.__tolerance_gps    = tolerance_gps
         self.__excel_en         = excel_en
 
     def __convert_h264_to_mp4( self , movieFileName ):
@@ -551,9 +876,9 @@ class SensorAnalyzerImpl:
         if shutil.which("MP4Box") is not None:
             if movieFileName is not None:
                 print("[Info] Convert from H.264 to MP4.")
+                print("[Info] MP4Box -add " + movieFileName + " " + movieFileName + ".mp4")
                 subprocess.run(
-                    "MP4Box -add " + movieFileName + " " + movieFileName + ".mp4" +
-                    " 2>&1 | tee MP4Box_" + movieFileName + ".log" ,
+                    "MP4Box -add " + movieFileName + " " + movieFileName + ".mp4" ,
                     shell=True , capture_output=True , text=True
                 )
             else:
@@ -561,6 +886,28 @@ class SensorAnalyzerImpl:
         else:
             print("[Warn] Install it with the following command.")
             print("[Warn] apt install -y gpac")
+
+    def __generate_map_html( self ):
+        dataFrame     = pandas.read_csv( self.__gps_csv )
+        folium_figure = folium.Figure(width=1500, height=700)
+        center_lat    = 35
+        center_lon    = 139
+        folium_map    = folium.Map( [ center_lat , center_lon ] , zoom_start=4.5 ).add_to( folium_figure )
+        for i in range( dataFrame.count()["latitude"] ):
+            folium.Marker( location=[ dataFrame.loc[ i , "latitude" ] , dataFrame.loc[ i , "longitude" ] ] ).add_to( folium_map )
+        folium_map.save( self.__gps_csv + ".html" )
+
+    def __generate_map_kml( self ):
+        dataFrame                        = pandas.read_csv( os.path.join(os.getcwd(),path) , header=0 )
+        tuple_B                          =  [tuple(x) for x in df_B[['longitude','latitude','altitude']].values]
+        kml                              = simplekml.Kml(open=1)
+        linestring                       = kml.newlinestring(name="A Sloped Line")
+        linestring.coords                = tuple_B
+        linestring.altitudemode          = simplekml.AltitudeMode.relativetoground
+        linestring.extrude               = 0
+        linestring.style.linestyle.width = 3
+        linestring.style.linestyle.color = simplekml.Color.red
+        kml.save( self.__gps_csv + ".kml" )
 
     def __generate_alititude_csv( self ):
         print("[Info] Start the __generate_alititude_csv function.")
@@ -843,7 +1190,125 @@ class SensorAnalyzerImpl:
                             matchTolerance.append( empty_row )
                     concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
                     dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
-                    
+
+                if self.__icm20948_csv is not None:
+                    matchTolerance  = []
+                    icm20948DataFrame = pandas.read_csv( self.__icm20948_csv )
+                    for unix_epoch_time in dataFrame['unix_epoch_time']:
+                        match = icm20948DataFrame[
+                            ( icm20948DataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance ) &
+                            ( icm20948DataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance )
+                        ].copy()
+    
+                        if not match.empty:
+                            match['icm20948_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                            match                                 = match.loc[match['icm20948_unix_epoch_time_delta'].idxmin()]
+                            match                                 = match.to_frame().T
+                            match_row                             = match.rename(
+                                columns={
+                                    'elapsed_time'     : 'icm20948_elapsed_time'     ,
+                                    'start_epoch_time' : 'icm20948_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'icm20948_unix_epoch_time'  ,
+                                    'ax'               : 'icm20948_ax'               ,
+                                    'ay'               : 'icm20948_ay'               ,
+                                    'az'               : 'icm20948_az'               ,
+                                    'gx'               : 'icm20948_gx'               ,
+                                    'gy'               : 'icm20948_gy'               ,
+                                    'gz'               : 'icm20948_gz'               ,
+                                    'mx'               : 'icm20948_mx'               ,
+                                    'my'               : 'icm20948_my'               ,
+                                    'mz'               : 'icm20948_mz'               ,
+                                    'temperature'      : 'icm20948_temperature'
+                                }
+                            )
+                            matchTolerance.append( match_row )
+    
+                        else:
+                            empty_row = pandas.DataFrame( { col : [numpy.nan] for col in icm20948DataFrame.columns } )
+                            empty_row = empty_row.rename(
+                                columns={
+                                    'elapsed_time'     : 'icm20948_elapsed_time'     ,
+                                    'start_epoch_time' : 'icm20948_start_epoch_time' ,
+                                    'unix_epoch_time'  : 'icm20948_unix_epoch_time'  ,
+                                    'ax'               : 'icm20948_ax'               ,
+                                    'ay'               : 'icm20948_ay'               ,
+                                    'az'               : 'icm20948_az'               ,
+                                    'gx'               : 'icm20948_gx'               ,
+                                    'gy'               : 'icm20948_gy'               ,
+                                    'gz'               : 'icm20948_gz'               ,
+                                    'mx'               : 'icm20948_mx'               ,
+                                    'my'               : 'icm20948_my'               ,
+                                    'mz'               : 'icm20948_mz'               ,
+                                    'temperature'      : 'icm20948_temperature'
+                                }
+                            )
+                            matchTolerance.append( empty_row )
+                    concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                    dataFrame = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+
+                if self.__gps_csv is not None:
+                    matchTolerance  = []
+                    gpsDataFrame = pandas.read_csv( self.__gps_csv )
+                    for unix_epoch_time in dataFrame['unix_epoch_time']:
+                        match = gpsDataFrame[
+                            ( gpsDataFrame['unix_epoch_time'] >= unix_epoch_time - self.__tolerance_gps ) &
+                            ( gpsDataFrame['unix_epoch_time'] <= unix_epoch_time + self.__tolerance_gps )
+                        ].copy()
+    
+                        if not match.empty:
+                            match['gps_unix_epoch_time_delta'] = abs(match['unix_epoch_time'] - unix_epoch_time)
+                            match                              = match.loc[match['gps_unix_epoch_time_delta'].idxmin()]
+                            match                              = match.to_frame().T
+                            match_row                          = match.rename(
+                                columns={
+                                    'elapsed_time'       : 'gps_elapsed_time'       ,
+                                    'start_epoch_time'   : 'gps_start_epoch_time'   ,
+                                    'unix_epoch_time'    : 'gps_unix_epoch_time'    ,
+                                    'latitude'           : 'gps_latitude'           ,
+                                    'longitude'          : 'gps_longitude'          ,
+                                    'altitude'           : 'gps_altitude'           ,
+                                    'num_sats'           : 'gps_num_sats'           ,
+                                    'datestam'           : 'gps_datestam'           ,
+                                    'timestamp'          : 'gps_timestamp'          ,
+                                    'spd_over_grnd'      : 'gps_spd_over_grnd'      ,
+                                    'true_course'        : 'gps_true_course'        ,
+                                    'true_track'         : 'gps_true_track'         ,
+                                    'spd_over_grnd_kmph' : 'gps_spd_over_grnd_kmph' ,
+                                    'pdop'               : 'gps_pdop'               ,
+                                    'hdop'               : 'gps_hdop'               ,
+                                    'vdop'               : 'gps_vdop'               ,
+                                    'num_sv_in_view'     : 'gps_num_sv_in_view'
+                                }
+                            )
+                            matchTolerance.append( match_row )
+    
+                        else:
+                            empty_row = pandas.DataFrame( { col : [numpy.nan] for col in gpsDataFrame.columns } )
+                            empty_row = empty_row.rename(
+                                columns={
+                                    'elapsed_time'       : 'gps_elapsed_time'       ,
+                                    'start_epoch_time'   : 'gps_start_epoch_time'   ,
+                                    'unix_epoch_time'    : 'gps_unix_epoch_time'    ,
+                                    'latitude'           : 'gps_latitude'           ,
+                                    'longitude'          : 'gps_longitude'          ,
+                                    'altitude'           : 'gps_altitude'           ,
+                                    'num_sats'           : 'gps_num_sats'           ,
+                                    'datestam'           : 'gps_datestam'           ,
+                                    'timestamp'          : 'gps_timestamp'          ,
+                                    'spd_over_grnd'      : 'gps_spd_over_grnd'      ,
+                                    'true_course'        : 'gps_true_course'        ,
+                                    'true_track'         : 'gps_true_track'         ,
+                                    'spd_over_grnd_kmph' : 'gps_spd_over_grnd_kmph' ,
+                                    'pdop'               : 'gps_pdop'               ,
+                                    'hdop'               : 'gps_hdop'               ,
+                                    'vdop'               : 'gps_vdop'               ,
+                                    'num_sv_in_view'     : 'gps_num_sv_in_view'
+                                }
+                            )
+                            matchTolerance.append( empty_row )
+                    concatDataFrame = pandas.concat( matchTolerance , ignore_index=True )
+                    dataFrame       = pandas.concat( [ dataFrame , concatDataFrame ] , axis=1 )
+                
             if self.__excel_en:
                 self.__output_to_excel( "movie" , basename + "_analyse.xlsx" , dataFrame )
                 #dataFrame.to_excel(  basename + "_analyse.xlsx" , index=False )
@@ -900,9 +1365,35 @@ class SensorAnalyzerImpl:
                 text = text + "MPU6050 GY           : " + str( dataFrame.iloc[frame_index]['mpu6050_gy']         ) + "\n"
                 text = text + "MPU6050 GZ           : " + str( dataFrame.iloc[frame_index]['mpu6050_gz']         ) + "\n"
             if self.__mpu9250_csv is not None:
-                text = text + "MPU6050 ACCEL        : " + str( dataFrame.iloc[frame_index]['mpu9250_accel']      ) + "\n"
-                text = text + "MPU6050 GYRO         : " + str( dataFrame.iloc[frame_index]['mpu9250_gyro']       ) + "\n"
-                text = text + "MPU6050 MAGNET       : " + str( dataFrame.iloc[frame_index]['mpu9250_magnet']     ) + "\n"
+                text = text + "MPU9250 ACCEL        : " + str( dataFrame.iloc[frame_index]['mpu9250_accel']      ) + "\n"
+                text = text + "MPU9250 GYRO         : " + str( dataFrame.iloc[frame_index]['mpu9250_gyro']       ) + "\n"
+                text = text + "MPU9250 MAGNET       : " + str( dataFrame.iloc[frame_index]['mpu9250_magnet']     ) + "\n"
+            if self.__icm20948_csv is not None:
+                text = text + "ICM20948 AX           : " + str( dataFrame.iloc[frame_index]['icm20948_ax']         ) + "\n"
+                text = text + "ICM20948 AY           : " + str( dataFrame.iloc[frame_index]['icm20948_ay']         ) + "\n"
+                text = text + "ICM20948 AZ           : " + str( dataFrame.iloc[frame_index]['icm20948_az']         ) + "\n"
+                text = text + "ICM20948 GX           : " + str( dataFrame.iloc[frame_index]['icm20948_gx']         ) + "\n"
+                text = text + "ICM20948 GY           : " + str( dataFrame.iloc[frame_index]['icm20948_gy']         ) + "\n"
+                text = text + "ICM20948 GZ           : " + str( dataFrame.iloc[frame_index]['icm20948_gz']         ) + "\n"
+                text = text + "ICM20948 MX           : " + str( dataFrame.iloc[frame_index]['icm20948_mx']         ) + "\n"
+                text = text + "ICM20948 MY           : " + str( dataFrame.iloc[frame_index]['icm20948_my']         ) + "\n"
+                text = text + "ICM20948 MZ           : " + str( dataFrame.iloc[frame_index]['icm20948_mz']         ) + "\n"
+            if self.__gps_csv is not None:
+                text = text + "GPS LATITUDE           : " + str( dataFrame.iloc[frame_index]['gps_latitude']           ) + "\n"
+                text = text + "GPS LONGITUDE          : " + str( dataFrame.iloc[frame_index]['gps_longitude']          ) + "\n"
+                text = text + "GPS ALTITUDE           : " + str( dataFrame.iloc[frame_index]['gps_altitude']           ) + "\n"
+                text = text + "GPS NUM_SATS           : " + str( dataFrame.iloc[frame_index]['gps_num_sats']           ) + "\n"
+                text = text + "GPS DATESTAM           : " + str( dataFrame.iloc[frame_index]['gps_datestam']           ) + "\n"
+                text = text + "GPS TIMESTAMP          : " + str( dataFrame.iloc[frame_index]['gps_timestamp']          ) + "\n"
+                text = text + "GPS SPD OVER GRND      : " + str( dataFrame.iloc[frame_index]['gps_spd_over_grnd']      ) + "\n"
+                text = text + "GPS TRUE COURSE        : " + str( dataFrame.iloc[frame_index]['gps_true_course']        ) + "\n"
+                text = text + "GPS TRUE TRACK         : " + str( dataFrame.iloc[frame_index]['gps_true_track']         ) + "\n"
+                text = text + "GPS SPD OVER GRND KMPH : " + str( dataFrame.iloc[frame_index]['gps_spd_over_grnd_kmph'] ) + "\n"
+                text = text + "GPS PDOP               : " + str( dataFrame.iloc[frame_index]['gps_pdop']               ) + "\n"
+                text = text + "GPS HDOP               : " + str( dataFrame.iloc[frame_index]['gps_hdop']               ) + "\n"
+                text = text + "GPS VDOP               : " + str( dataFrame.iloc[frame_index]['gps_vdop']               ) + "\n"
+                text = text + "GPS NUM SV IN VIEW     : " + str( dataFrame.iloc[frame_index]['gps_num_sv_in_view']     ) + "\n"
+                
             x , y       = 10 , 30
             #font        = cv2.FONT_HERSHEY_SIMPLEX
             font        = cv2.FONT_HERSHEY_PLAIN
@@ -945,6 +1436,11 @@ class SensorAnalyzerImpl:
                 )
             if self.__altitude_en:
                 bme280DataFrame = self.__generate_alititude_csv()
+            if self.__icm20948_csv is not None:
+                pass
+            if self.__gps_csv is not None:
+                threadList.append( threading.Thread( target=self.__generate_map_html      ) )
+                threadList.append( threading.Thread( target=self.__generate_map_kml       ) )
             if self.__bme280_graph_en  :
                 threadList.append( threading.Thread( target=self.__generate_bme280_graph  ) )
             if self.__mpu6050_graph_en :
@@ -953,10 +1449,7 @@ class SensorAnalyzerImpl:
                 threadList.append( threading.Thread( target=self.__generate_mpu9250_graph ) )
             if self.__frame_sync_en    :
                 threadList.append(
-                    threading.Thread(
-                        args   = ( bme280DataFrame , )   ,
-                        target = self.__analyse_frame_sync
-                    )
+                    threading.Thread( args   = ( bme280DataFrame , )  , target = self.__analyse_frame_sync )
                 )
             for signleThread in threadList:
                 signleThread.start()
