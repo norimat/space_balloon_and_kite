@@ -104,13 +104,13 @@ csvファイルについてセンサー取得モード時はオプションで�
 以下は、カメラモジュールから取得したデータを表している。
 (※一部別ソフトウェアを通してぼかしをいれている。)
 
-<img src="fig/Photo_captured_using_a_camera module.svg" width= "500px" >
+<img src="fig/Photo_captured_using_a_camera module.svg" width= "600px" >
 
 以下は、カメラモジュールの出力csvおよび他センサーデータ計測データをカメラモジュールから取得したデータに埋め込んだ結果を表している。
 
-<img src="fig/Frame_from_an_edited_video.svg" width= "500px" >
+<img src="fig/Frame_from_an_edited_video.svg" width= "600px" >
 
-<img src="fig/An_image_with_embedded_measurement_results.svg" width= "500px" >
+<img src="fig/An_image_with_embedded_measurement_results.svg" width= "600px" >
 
 
 ### 1-4. 動作モード
@@ -1025,17 +1025,17 @@ GPS受信機には起動直後衛星起動データ存在しない。
 一方右側のように緑色のLEDが点滅していれば取得できている。
 なお、画像のUSBドングルは軽量化のためカバーを外している。
 
-<img src="fig/GPS_dongle.svg" width= "500px" >
+<img src="fig/GPS_dongle.svg" width= "600px" >
 
 ### 9-5. GPSデータ解析によるMAPデータ出力
 
 計測データの経度および緯度データを用いることでMAP上にペイロードの通過経路をHTMLファイル形式で出力可能である。
 
-<img src="fig/Route_plotted_using_the_folium_library.svg" width= "400px" >
+<img src="fig/Route_plotted_using_the_folium_library.svg" width= "600px" >
 
 `--map_animation`オプションを設定することでMAPデータにアニメーションを追加することも可能である。
 
-<img src="fig/Map_data_with_animation.gif?raw=true" width= "400px" >
+<img src="fig/Map_data_with_animation.gif?raw=true" width= "600px" >
 
 
 
