@@ -5,7 +5,7 @@
 | 日付 | 変更概要 |
 |-----------------------------------------------|--------------------|
 | 2025/05/04 | 新規作成 |
-| 2025/05/17 |  |
+| 2025/05/21 | 「1. space_balloon.py概要」について<br>　「1-2. クラス構成」の図修正<br>　「1-3-1. 実行オプション」へオプション追加<br>　「1-4-3.モード別クラスデータパス」の図修正<br>「4. カメラモジュールを用いた動画取得について」について<br>　「4-3. センサーデータ解析モード時の動画ファイル」追加<br>「8. ICM-20948を用いた加速度、角速度および地磁気の取得について」を追加<br>「9. IVK172 G-Mouse USB GPSを用いた計測データの取得について」を追加<br>「11. 今後の課題」について<br>　「11-4. 動画データと計測データのハードウェア同期」を追加<br>「付録」について<br>　「Python実行環境準備」へライブラリ追加<br>　「I2C通信」へICM-20948追加<br>　「カメラモジュールの比較」へRaspberry Pi HQ Cameraを追加<br>　「Raspberry Piのスペック表」へCPUコア数追加<br>　「消費電力の見積り」の内容修正<br>　「GoogleEarth Proでの可視化」を追加<br>「参考情報」を追加 |
 
 ## 1. space_balloon.py概要
 
@@ -58,6 +58,7 @@ space_balloon.pyは実行開始時および実行中に有効機能に応じて�
 |`--mode <モード番号>`                       | -                         | 0              | モード選択<br>センサー取得モード:0<br>センサーデータ解析モード:1<br>例: `--mode 0` |
 |`--output_dir <出力先ディレクトリ名>`       | センサー取得モード        | ./             | センサーから取得したデータの出力先ディレクトリを指定する<br>ディレクトリは事前に作成しておく必要がある<br>例: `--output_dir ./output` |
 |`--camera`                                  | センサー取得モード        | FalseでOFF     | カメラモジュールによる撮影を有効化するイネーブルオプション |
+|`--interval <計測間隔>`                  | センサー取得モード        | 0.0015(1.5msec) | カメラモジュール以外のセンサーからデータを取得する間隔<br>csvへの出力は1/3を掛けた秒数<br>例: `--bitrate 0.0015` |
 |`--framerate <フレームレート>`              | センサー取得モード        | 30             | 撮影時のフレームレート設定<br>例: `--framerate 30` |
 |`--bitrate <ビットレート>`                  | センサー取得モード        | 8000000(8Mbps) | 撮影時のビットレート設定<br>ビット単位で指定する<br>例: `--bitrate 8000000` |
 |`--width <水平サイズ>`                      | センサー取得モード        | 1920           | 撮影時の水平サイズ設定<br>例: `--width 1920` |
@@ -70,10 +71,10 @@ space_balloon.pyは実行開始時および実行中に有効機能に応じて�
 |`--icm20948`                              | センサー取得モード        | FalseでOFF     | ICM-20948からのデータ取得を有効化するイネーブルオプション |
 |`--bme280_addr <BME280のデバイスアドレス>`  | センサー取得モード        | 0x76           | BME280のデバイスアドレス<br>16進数で先頭に0xをつける必要あり<br>例: `--bme280_addr 0x76` |
 |`--mpu6050_addr <MPU6050のデバイスアドレス>`| センサー取得モード        | 0x68           | MPU6050のデバイスアドレス<br>16進数で先頭に0xをつける必要あり<br>例: `--mpu6050_addr 0x68` |
-|`--icm20948_addr <MPU6050のデバイスアドレス>`| センサー取得モード        | 0x69           | ICM-20948のデバイスアドレス<br>16進数で先頭に0xをつける必要あり<br>例: `--icm20948_addr 0x69` |
+|`--icm20948_addr <ICM-20948のデバイスアドレス>`| センサー取得モード        | 0x69           | ICM-20948のデバイスアドレス<br>16進数で先頭に0xをつける必要あり<br>例: `--icm20948_addr 0x69` |
 |`--frame_sync`                              | センサーデータ解析モード  | FalseでOFF     | センサー取得モードにおいて、カメラモジュールから取得したデータと他センサーの計測データを同期する<br>--movie_csvは必須で指定しないと何も実行しせず、他--bme280_csv、--altitude、--mpu6050_csv、--mpu9250_csv、--movieおよび--toleranceを設定しカスタマイズ可能 |
 |`--movie_csv <動画のcsvファイル>`           | センサーデータ解析モード  | FalseでOFF     | センサー取得モードにおいて取得した各フレームのタイムスタンプ出力ファイルを指定する<br>例: `--movie_csv video.csv` |
-|`--gps_csv <BME280のcsvファイル>`          | センサーデータ解析モード  | -              | センサー取得モードにおいて、IVK172 G-Mouse USB GPSから取得した計測データのcsvファイル名<br>例: `--gps_csv ./gps.csv` |
+|`--gps_csv <IVK172 G-Mouse USB GPSのcsvファイル>`          | センサーデータ解析モード  | -              | センサー取得モードにおいて、IVK172 G-Mouse USB GPSから取得した計測データのcsvファイル名<br>例: `--gps_csv ./gps.csv` |
 |`--bme280_csv <BME280のcsvファイル>`        | センサーデータ解析モード  | -              | センサー取得モードにおいて、BME280から取得した計測データのcsvファイル名<br>例: `--bme280_csv ./bme280.csv` |
 |`--mpu6050_csv <MPU6050のcsvファイル>`      | センサーデータ解析モード  | -              | センサー取得モードにおいて、MPU6050から取得した計測データのcsvファイル名<br>例: `--mpu6050_csv ./mpu6050.csv` |
 |`--mpu9250_csv <MPU9250のcsvファイル>`      | センサーデータ解析モード  | -              | センサー取得モードにおいて、MPU9250から取得した計測データのcsvファイル名<br>例: `--mpu9250_csv ./mpu9250.csv` |
@@ -88,6 +89,7 @@ space_balloon.pyは実行開始時および実行中に有効機能に応じて�
 |`--tolerance <許容誤差>`                    | センサーデータ解析モード  | 0.032          | --frame_syncオプションでフレーム毎の取得時間とセンサー取得時間で同期を取る際に取得時間で発生する時間の誤差許容範囲を指定する<br>秒単位で指定する<br>例: `--tolerance 0.015` |
 |`--tolerance_gps <許容誤差>`                    | センサーデータ解析モード  | 1          | --frame_syncオプションでフレーム毎の取得時間とIVK172 G-Mouse USB GPSからの取得時間で同期を取る際に取得時間で発生する時間の誤差許容範囲を指定する<br>秒単位で指定する<br>例: `--tolerance_gps 1` |
 |`--excel`                                   | センサーデータ解析モード  | FalseでOFF     | センサーデータ解析モードで出力する加工csvファイルをcsvでなく.xlsx形式で出力する |
+|`--map_animation`                           |  センサーデータ解析モード  | FalseでOFF     | GPS取得データをもとにアニメーション付きマップデータ出力をする<br>時系列データ加工機能未実装のため指定しても動作しない |
 
 #### 1-3-3. csvファイルおよびDataFrame
 
@@ -120,6 +122,8 @@ csvファイルについてセンサー取得モード時はオプションで�
 - 動画の1フレーム毎のタイムスタンプ
 - BME280の計測温度、気圧および湿度
 - MPU6050の計測加速度、角速度および温度
+- ICM-20948の計測加速度、角速度、地磁気および温度
+- IVK172 G-Mouse USB GPSの計測緯度・経度など
 
 ##### 1-4-1-1. 動画取得
 
@@ -194,6 +198,45 @@ elapsed_time  start_epoch_time  unix_epoch_time        ax        ay        az   
 ##### 1-4-1-4. MPU9250計測データ取得
 
 MPU9250は生産終了に伴い未実装となっている。
+
+##### 1-4-1-5. ICM-20948計測データ取得
+
+以下はICM-20948の出力csvは以下で、*センサー取得モード*時に出力する。
+- elapsed_timeは初回計測開始からの経過時間を秒単位で表している。
+- start_epoch_timeは初回計測開始時刻のUNIXエポックタイムを表している。
+- unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
+- ax、ayおよびazはICM-20948から取得した加速度を表している。
+- gx、gyおよびgzはICM-20948から取得した角速度を表している。
+- mx、myおよびmzはICM-20948から取得した地磁気を表している。
+- temperatureはICM-20948から取得した温度を表している。
+
+```text
+ICM-20948を5Vの繋いだところ、発熱し破損したため後日追加
+```
+
+
+##### 1-4-1-6. IVK172 G-Mouse USB GPS計測データ取得
+
+以下はIVK172 G-Mouse USB GPSの出力csvは以下で、*センサー取得モード*時に出力する。
+- elapsed_timeは初回計測開始からの経過時間を秒単位で表している。
+- start_epoch_timeは初回計測開始時刻のUNIXエポックタイムを表している。
+- 他計測値は、[9. IVK172 G-Mouse USB GPSを用いた計測データの取得について](#9-IVK172-G-Mouse-USB-GPSを用いた計測データの取得について)に記載している。
+- GPSデータの計測でNaNが多いのは、IVK172 G-Mouse USB GPSからのデータ更新時間が長く、経度、緯度および高度を優先してcsv出力するためである。
+
+```text
+elapsed_time  start_epoch_time  unix_epoch_time   latitude   longitude  altitude altitude_units  num_sats   datestam       timestamp  spd_over_grnd  true_course  true_track  spd_over_grnd_kmph  pdop  hdop  vdop  num_sv_in_view
+    2.381274        1747789812       1747789815  35.452590  139.643981         0              M       3.0  2025/5/21  01:10:13+00:00          1.577          NaN         NaN               2.921  3.39  3.24     1              11
+    4.752172        1747789812       1747789817  35.453642  139.644025        40              M       3.0  2025/5/21  01:10:14+00:00          1.144          NaN         NaN               2.119  3.39  3.23     1              11
+    6.398502        1747789812       1747789819  35.462870  139.645365        80              M       3.0  2025/5/21  01:10:15+00:00          0.771          NaN         NaN               1.427  3.38  3.23     1              11
+    9.141196        1747789812       1747789821  35.465572  139.645680       120              M       3.0  2025/5/21  01:10:16+00:00          0.234          NaN         NaN               0.433  3.38  3.23     1              11
+   12.202159        1747789812       1747789824  35.476835  139.645683       160              M       3.0  2025/5/21  01:10:17+00:00          0.108          NaN         NaN               0.199  3.38  3.23     1              11
+         ...               ...              ...        ...         ...       ...            ...       ...        ...             ...            ...          ...         ...                 ...   ...   ...   ...             ...
+ 1030.583782        1747789812       1747790843  40.962111  140.174137        26              M       NaN        NaN             NaN            NaN          NaN         NaN               4.620  3.35  3.20     1              11
+ 1031.583782        1747789812       1747790844  40.980784  140.174461        25              M       NaN        NaN             NaN            NaN          NaN         NaN               3.424  3.34  3.19     1              11
+ 1032.583782        1747789812       1747790845  40.968532  140.174894        20              M       NaN        NaN             NaN            NaN          NaN         NaN               2.941  3.34  3.19     1              11
+ 1033.583782        1747789812       1747790846  40.989889  140.175123        10              M       NaN        NaN             NaN            NaN          NaN         NaN               3.361  3.34  3.19     1              11
+ 1034.583782        1747789812       1747790847  40.981492  140.175168         0              M       NaN        NaN             NaN            NaN          NaN         NaN               2.804  3.34  3.19     1              11
+```
 
 #### 1-4-2.センサーデータ解析モード
 
@@ -744,6 +787,8 @@ ICM-20948で計測可能なデータは以下である。
 
 ### 8-2. Pythonコードの説明
 
+内容作成中
+<!--
 ```py
 import math
 
@@ -790,6 +835,7 @@ if heading_deg < 0:
 heading = calculate_heading(mag_x, mag_y)
 print(f"方位角（北 = 0°）: {heading:.2f}°")
 ```
+-->
 
 ### 8-2. 方角と角度の設定
 
@@ -882,37 +928,9 @@ IVK172 G-Mouse USB GPSで計測可能なデータは以下である。
 |gsa.vdop|GSA|垂直DOP|高度方向の精度指標。|
 |gsv.num_sv_in_view|GSV|可視衛星総数|受信機が見えている衛星の個数。|
 
-以下コードはIVK172 G-Mouse USB GPSから取得したデータを解析する`SensorAnalyzerImpl`クラスの`__generate_map_html`および`__generate_map_kml`関数である。
+IVK172 G-Mouse USB GPSから取得したデータは`SensorAnalyzerImpl`クラスの`__generate_map_html`および`__generate_map_kml`関数で解析する。
 
 `__generate_map_html`関数では`folium`ライブラリを用いてMapデータをHTML形式で出力する。
-
-```py
-    def __generate_map_html( self ):
-        dataFrame     = pandas.read_csv( self.__gps_csv )
-        folium_figure = folium.Figure(width=1500, height=700)
-        center_lat    = 35
-        center_lon    = 139
-        folium_map    = folium.Map( [ center_lat , center_lon ] , zoom_start=4.5 ).add_to( folium_figure )
-        for i in range( dataFrame.count()["latitude"] ):
-            folium.Marker( location=[ dataFrame.loc[ i , "latitude" ] , dataFrame.loc[ i , "longitude" ] ] ).add_to( folium_map )
-        folium_map.save( self.__gps_csv + ".html" )
-```
-
-`__generate_map_kml`関数ではGoogleEarth Proで読み込めるKML形式Mapデータを出力する。
-
-```py
-    def __generate_map_kml( self ):
-        dataFrame                        = pandas.read_csv( os.path.join(os.getcwd(),path) , header=0 )
-        tuple_B                          =  [tuple(x) for x in df_B[['longitude','latitude','altitude']].values]
-        kml                              = simplekml.Kml(open=1)
-        linestring                       = kml.newlinestring(name="A Sloped Line")
-        linestring.coords                = tuple_B
-        linestring.altitudemode          = simplekml.AltitudeMode.relativetoground
-        linestring.extrude               = 0
-        linestring.style.linestyle.width = 3
-        linestring.style.linestyle.color = simplekml.Color.red
-        kml.save( self.__gps_csv + ".kml" )
-```
 
 ### 9-3. USBシリアルポートの確認
 
@@ -1013,7 +1031,14 @@ GPS受信機には起動直後衛星起動データ存在しない。
 
 計測データの経度および緯度データを用いることでMAP上にペイロードの通過経路をHTMLファイル形式で出力可能である。
 
-<img src="fig/Route_plotted_using_the_folium_library.svg" width= "500px" >
+<img src="fig/Route_plotted_using_the_folium_library.svg" width= "400px" >
+
+`--map_animation`オプションを設定することでMAPデータにアニメーションを追加することも可能である。
+
+<img src="fig/Map_data_with_animation.gif?raw=true" width= "400px" >
+
+
+
 
 また、高度情報があればkmlファイルを生成することができる。
 これは、[付録](#付録)の[GoogleEarth Proでの可視化](#GoogleEarth-Proでの可視化)に示すように、GoogleEarth Proに出力kmlファイルを読み込むことでペイロードの進んだ経路を表示することができる。
@@ -1165,7 +1190,7 @@ $ sudo apt install -y tcl-dev
 $ sudo apt install -y libatlas-base-dev
 $ sudo apt install -y gfortran
 $ sudo apt install -y libopenblas-dev
-$ pip install --upgrade pip
+$ pip install --upgrade pip setuptools wheel
 $ pip install smbus2
 $ pip install FaBo9Axis_MPU9250
 $ pip install smbus
@@ -1470,6 +1495,7 @@ $ sudo raspi-config
 |項目|Raspberry Pi<br>3A+|Raspberry Pi<br>3B+|Raspberry Pi<br>Zero(無印)|Raspberry Pi<br>Zero 2 W|Raspberry Pi<br>4B|Raspberry Pi<br>5|
 |-----|-----|-----|-----|-----|-----|-----|
 |CPU|Broadcom BCM2837B0,<br>1.4GHz クアッドコア<br>ARM Cortex-A53|Broadcom BCM2837B0,<br>1.4GHz クアッドコア<br>ARM Cortex-A53|Broadcom BCM2835,<br>ARM1176JZF-S|Broadcom BCM2710A1,<br>1GHz クアッドコア<br>ARM Cortex-A53|Broadcom BCM2711,<br>1.5GHz クアッドコア<br>ARM Cortex-A72|Broadcom BCM2712,<br>3.0GHz クアッドコア<br>ARM Cortex-A76|
+|CPUコア数|4コア|4コア|1コア|4コア|4コア|4コア|
 |GPU|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore IV|Broadcom<br>VideoCore VI|Broadcom<br>VideoCore VII|
 |RAM|512MB<br>LPDDR2|1GB<br>LPDDR2|512MB<br>LPDDR2|512MB<br>LPDDR2|2GB/4GB/8GB<br>LPDDR4-3200|4GB/8GB/16GB<br>LPDDR4X|
 |CPUクロック|1.4GHz|1.4GHz|1.0GHz|1.0GHz|1.5GHz|3.0GHz|
@@ -1639,3 +1665,5 @@ kmlファイルを読み込むことでGoogleEarth Proで可視化すること�
   - その他
     - [GoogleEarth](https://earth.google.com/)
     - [GoogleEarth Pro](https://www.google.com/earth/about/versions/)
+    - [NATIONAL WEATHER SERVICE](https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/)
+    
