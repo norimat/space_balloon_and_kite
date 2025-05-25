@@ -1,11 +1,15 @@
 #!/usr/bin/env python
+try:
+    import smbus2
+    import bme280
+    import FaBo9Axis_MPU9250
+    import qwiic_icm20948
+    import serial
+    import pynmea2
+except ImportError:
+    print("[Warn] The libraries required for reading sensor data from GPIO or related interfaces have not been imported.")
+
 import math
-import smbus2
-import bme280
-import FaBo9Axis_MPU9250
-import qwiic_icm20948
-import serial
-import pynmea2
 import folium
 from folium.plugins import TimestampedGeoJson
 import simplekml
@@ -223,6 +227,8 @@ class SensorWrapper:
             self.__generate_empty_csvFile( gpsCsvFile , data )
             self.__gps_fa = self.__get_csvFile( gpsCsvFile )
             self.__gpsModuleImpl   = GPSModuleImpl( self.__gps_port , self.__gps_fa , self.__interval )
+        else:
+             SensorWrapper.gps_startedFlg = True
 
         if self.__icm20948_en :
             print("[Info] Activate the ICM-20948.")
@@ -246,6 +252,8 @@ class SensorWrapper:
             self.__generate_empty_csvFile( icm20948CsvFile , data )
             self.__icm20948_fa = self.__get_csvFile( icm20948CsvFile )
             self.__icm20948Impl = ICM20948Impl( self.__icm20948_addr , self.__icm20948_fa , self.__interval )
+        else:
+             SensorWrapper.icm20948_startedFlg = True
 
         if self.__bme280_en :
             print("[Info] Activate the BME280.")
@@ -391,7 +399,7 @@ class CameraModuleImpl:
 
     def __start_camera_module( self ):
         while True:
-            if  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg and  SensorWrapper.mpu9250_startedFlg and SensorWrapper.icm20948_startedFlg and SensorWrapper.gps_startedFlg:
+            if  SensorWrapper.bme280_startedFlg and  SensorWrapper.mpu6050_startedFlg and  SensorWrapper.mpu9250_startedFlg and SensorWrapper.icm20948_startedFlg and SensorWrapper.gps_startedFlg:
                 break
             else:
                 time.sleep(1)
@@ -583,7 +591,7 @@ class BME280Impl:
         while True:
             end_unix_epoch_time = time.time()
             total_time = end_unix_epoch_time - self.__start_unix_epoch_time
-            if self.__temperature and self.__pressure and self.__humidity:
+            if (self.__temperature is not None) and (self.__pressure is not None) and (self.__humidity is not None):
                 data = [
                     [
                         total_time                   ,
@@ -669,7 +677,7 @@ class MPU6050Impl:
         while True:
             end_unix_epoch_time = time.time()
             total_time = end_unix_epoch_time - self.__start_unix_epoch_time
-            if self.__ax and self.__ay and self.__az and self.__gx and self.__gy and self.__gz and self.__temperature:
+            if (self.__ax is not None) and (self.__ay is not None) and (self.__az is not None) and (self.__gx is not None) and (self.__gy is not None) and (self.__gz is not None) and (self.__temperature is not None):
                 data = [
                     [
                         total_time                   ,
@@ -734,7 +742,7 @@ class MPU9250Impl:
         while True:
             end_unix_epoch_time = time.time()
             total_time          = end_unix_epoch_time - self.__start_unix_epoch_time
-            if self.__accel and self.__gyro and self.__magnet:
+            if (self.__accel is not None) and (self.__gyro is not None) and (self.__magnet is not None):
                 data = [
                     [
                         total_time                   ,
@@ -903,6 +911,7 @@ class SensorAnalyzerImpl:
 
     def __convert_h264_to_mp4( self , movieFileName ):
         print("[Info] Start the __convert_h264_to_mp4 function.")
+        start_unix_epoch_time = time.time()
         if shutil.which("MP4Box") is not None:
             if movieFileName is not None:
                 print("[Info] Convert from H.264 to MP4.")
@@ -916,6 +925,9 @@ class SensorAnalyzerImpl:
         else:
             print("[Warn] Install it with the following command.")
             print("[Warn] apt install -y gpac")
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __convert_h264_to_mp4 function takes " + str(total_time) + " seconds to run.")
 
     def __generate_map_html( self ):
         print("[Info] Start the __generate_map_html function.")
@@ -1398,6 +1410,7 @@ class SensorAnalyzerImpl:
 
     def __movie_gen( self , dataFrame ):
         print("[Info] Start the __movie_gen function.")
+        shutil.rmtree( './tmp' , ignore_errors=True )
         os.makedirs( './tmp' , exist_ok=True )
         self.__separation_h264_to_jpeg( self.__movieFile )
         cap       = cv2.VideoCapture( self.__movieFile )
@@ -1405,10 +1418,11 @@ class SensorAnalyzerImpl:
         self.__add_sensor_frame( dataFrame , framerate )
         self.__merge_jpeg_to_h264( self.__movieFile + ".sensor.h264" , str(framerate) )
         self.__convert_h264_to_mp4( self.__movieFile + ".sensor.h264" )
-        shutil.rmtree('./tmp')  
+        shutil.rmtree( './tmp' , ignore_errors=True )
 
     def __separation_h264_to_jpeg( self , movieFileName ):
         print("[Info] Start the __separation_h264_to_jpeg function.")
+        start_unix_epoch_time = time.time()
         if shutil.which("ffmpeg") is not None:
             print("[Info] ffmpeg -i " + movieFileName + " -qscale:v 2 tmp/frame_%08d.jpg")
             subprocess.run(
@@ -1419,59 +1433,63 @@ class SensorAnalyzerImpl:
                 text           = True
             )
         else:
-            print("[Warn] apt install -y ffmpeg")        
+            print("[Warn] apt install -y ffmpeg")
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __separation_h264_to_jpeg function takes " + str(total_time) + " seconds to run.")
 
     def __add_sensor_frame( self , dataFrame , framerate ):
         print("[Info] Start the __add_sensor_frame function.")
+        start_unix_epoch_time = time.time()
         imgFiles = sorted(glob.glob('tmp/frame_*.jpg'))
         frame_index = 0
         for imgFile in imgFiles:
             image    = cv2.imread(imgFile)
-            text     =        "Date : " + str( dataFrame.iloc[frame_index]['current_time']       ) + "\n"
-            text     = text + "Framerate : " + str( framerate                                         ) + "\n"
+            text     =        "Date : " + str( dataFrame.iloc[frame_index]['current_time'] ) + "\n"
+            text     = text + "Framerate : " + str( framerate ) + "\n"
             if self.__bme280_csv  is not None:
                 if self.__altitude_en:
                     text = text + "BME280 Altitude : " + str( dataFrame.iloc[frame_index]['bme280_altitude'] ) + "\n"
                 text = text + "BME280 Temperature : " + str( dataFrame.iloc[frame_index]['bme280_temperature'] ) + "\n"
-                text = text + "BME280 Pressure : " + str( dataFrame.iloc[frame_index]['bme280_pressure']    ) + "\n"
-                text = text + "BME280 Humidly : " + str( dataFrame.iloc[frame_index]['bme280_humidity']    ) + "\n"
+                text = text + "BME280 Pressure : " + str( dataFrame.iloc[frame_index]['bme280_pressure'] ) + "\n"
+                text = text + "BME280 Humidly : " + str( dataFrame.iloc[frame_index]['bme280_humidity'] ) + "\n"
             if self.__mpu6050_csv is not None:
-                text = text + "MPU6050 AX : " + str( dataFrame.iloc[frame_index]['mpu6050_ax']         ) + "\n"
-                text = text + "MPU6050 AY : " + str( dataFrame.iloc[frame_index]['mpu6050_ay']         ) + "\n"
-                text = text + "MPU6050 AZ : " + str( dataFrame.iloc[frame_index]['mpu6050_az']         ) + "\n"
-                text = text + "MPU6050 GX : " + str( dataFrame.iloc[frame_index]['mpu6050_gx']         ) + "\n"
-                text = text + "MPU6050 GY : " + str( dataFrame.iloc[frame_index]['mpu6050_gy']         ) + "\n"
-                text = text + "MPU6050 GZ : " + str( dataFrame.iloc[frame_index]['mpu6050_gz']         ) + "\n"
+                text = text + "MPU6050 AX : " + str( dataFrame.iloc[frame_index]['mpu6050_ax'] ) + "\n"
+                text = text + "MPU6050 AY : " + str( dataFrame.iloc[frame_index]['mpu6050_ay'] ) + "\n"
+                text = text + "MPU6050 AZ : " + str( dataFrame.iloc[frame_index]['mpu6050_az'] ) + "\n"
+                text = text + "MPU6050 GX : " + str( dataFrame.iloc[frame_index]['mpu6050_gx'] ) + "\n"
+                text = text + "MPU6050 GY : " + str( dataFrame.iloc[frame_index]['mpu6050_gy'] ) + "\n"
+                text = text + "MPU6050 GZ : " + str( dataFrame.iloc[frame_index]['mpu6050_gz'] ) + "\n"
             if self.__mpu9250_csv is not None:
-                text = text + "MPU9250 Accel : " + str( dataFrame.iloc[frame_index]['mpu9250_accel']      ) + "\n"
-                text = text + "MPU9250 Gyro : " + str( dataFrame.iloc[frame_index]['mpu9250_gyro']       ) + "\n"
-                text = text + "MPU9250 Magnet : " + str( dataFrame.iloc[frame_index]['mpu9250_magnet']     ) + "\n"
+                text = text + "MPU9250 Accel : " + str( dataFrame.iloc[frame_index]['mpu9250_accel'] ) + "\n"
+                text = text + "MPU9250 Gyro : " + str( dataFrame.iloc[frame_index]['mpu9250_gyro'] ) + "\n"
+                text = text + "MPU9250 Magnet : " + str( dataFrame.iloc[frame_index]['mpu9250_magnet'] ) + "\n"
             if self.__icm20948_csv is not None:
-                text = text + "ICM20948 AX : " + str( dataFrame.iloc[frame_index]['icm20948_ax']         ) + "\n"
-                text = text + "ICM20948 AY : " + str( dataFrame.iloc[frame_index]['icm20948_ay']         ) + "\n"
-                text = text + "ICM20948 AZ : " + str( dataFrame.iloc[frame_index]['icm20948_az']         ) + "\n"
-                text = text + "ICM20948 GX : " + str( dataFrame.iloc[frame_index]['icm20948_gx']         ) + "\n"
-                text = text + "ICM20948 GY : " + str( dataFrame.iloc[frame_index]['icm20948_gy']         ) + "\n"
-                text = text + "ICM20948 GZ : " + str( dataFrame.iloc[frame_index]['icm20948_gz']         ) + "\n"
-                text = text + "ICM20948 MX : " + str( dataFrame.iloc[frame_index]['icm20948_mx']         ) + "\n"
-                text = text + "ICM20948 MY : " + str( dataFrame.iloc[frame_index]['icm20948_my']         ) + "\n"
-                text = text + "ICM20948 MZ : " + str( dataFrame.iloc[frame_index]['icm20948_mz']         ) + "\n"
+                text = text + "ICM20948 AX : " + str( dataFrame.iloc[frame_index]['icm20948_ax'] ) + "\n"
+                text = text + "ICM20948 AY : " + str( dataFrame.iloc[frame_index]['icm20948_ay'] ) + "\n"
+                text = text + "ICM20948 AZ : " + str( dataFrame.iloc[frame_index]['icm20948_az'] ) + "\n"
+                text = text + "ICM20948 GX : " + str( dataFrame.iloc[frame_index]['icm20948_gx'] ) + "\n"
+                text = text + "ICM20948 GY : " + str( dataFrame.iloc[frame_index]['icm20948_gy'] ) + "\n"
+                text = text + "ICM20948 GZ : " + str( dataFrame.iloc[frame_index]['icm20948_gz'] ) + "\n"
+                text = text + "ICM20948 MX : " + str( dataFrame.iloc[frame_index]['icm20948_mx'] ) + "\n"
+                text = text + "ICM20948 MY : " + str( dataFrame.iloc[frame_index]['icm20948_my'] ) + "\n"
+                text = text + "ICM20948 MZ : " + str( dataFrame.iloc[frame_index]['icm20948_mz'] ) + "\n"
             if self.__gps_csv is not None:
-                text = text + "GPS latitude : " + str( dataFrame.iloc[frame_index]['gps_latitude']           ) + "\n"
-                text = text + "GPS longitude : " + str( dataFrame.iloc[frame_index]['gps_longitude']          ) + "\n"
-                text = text + "GPS altitude : " + str( dataFrame.iloc[frame_index]['gps_altitude']           ) + "\n"
-                text = text + "GPS altitude_unit : " + str( dataFrame.iloc[frame_index]['gps_altitude_units']     ) + "\n"
-                text = text + "GPS num_sats : " + str( dataFrame.iloc[frame_index]['gps_num_sats']           ) + "\n"
-                text = text + "GPS datestam : " + str( dataFrame.iloc[frame_index]['gps_datestam']           ) + "\n"
-                text = text + "GPS timestamp: " + str( dataFrame.iloc[frame_index]['gps_timestamp']          ) + "\n"
-                text = text + "GPS spd over grnd : " + str( dataFrame.iloc[frame_index]['gps_spd_over_grnd']      ) + "\n"
-                text = text + "GPS true course : " + str( dataFrame.iloc[frame_index]['gps_true_course']        ) + "\n"
-                text = text + "GPS true track : " + str( dataFrame.iloc[frame_index]['gps_true_track']         ) + "\n"
+                text = text + "GPS latitude : " + str( dataFrame.iloc[frame_index]['gps_latitude'] ) + "\n"
+                text = text + "GPS longitude : " + str( dataFrame.iloc[frame_index]['gps_longitude'] ) + "\n"
+                text = text + "GPS altitude : " + str( dataFrame.iloc[frame_index]['gps_altitude'] ) + "\n"
+                text = text + "GPS altitude_unit : " + str( dataFrame.iloc[frame_index]['gps_altitude_units'] ) + "\n"
+                text = text + "GPS num_sats : " + str( dataFrame.iloc[frame_index]['gps_num_sats'] ) + "\n"
+                text = text + "GPS datestam : " + str( dataFrame.iloc[frame_index]['gps_datestam'] ) + "\n"
+                text = text + "GPS timestamp: " + str( dataFrame.iloc[frame_index]['gps_timestamp'] ) + "\n"
+                text = text + "GPS spd over grnd : " + str( dataFrame.iloc[frame_index]['gps_spd_over_grnd'] ) + "\n"
+                text = text + "GPS true course : " + str( dataFrame.iloc[frame_index]['gps_true_course'] ) + "\n"
+                text = text + "GPS true track : " + str( dataFrame.iloc[frame_index]['gps_true_track'] ) + "\n"
                 text = text + "GPS spd over grnd kmph : " + str( dataFrame.iloc[frame_index]['gps_spd_over_grnd_kmph'] ) + "\n"
-                text = text + "GPS pdop : " + str( dataFrame.iloc[frame_index]['gps_pdop']               ) + "\n"
-                text = text + "GPS hdop : " + str( dataFrame.iloc[frame_index]['gps_hdop']               ) + "\n"
-                text = text + "GPS vdop : " + str( dataFrame.iloc[frame_index]['gps_vdop']               ) + "\n"
-                text = text + "GPS num sv in veiw : " + str( dataFrame.iloc[frame_index]['gps_num_sv_in_view']     ) + "\n"
+                text = text + "GPS pdop : " + str( dataFrame.iloc[frame_index]['gps_pdop'] ) + "\n"
+                text = text + "GPS hdop : " + str( dataFrame.iloc[frame_index]['gps_hdop'] ) + "\n"
+                text = text + "GPS vdop : " + str( dataFrame.iloc[frame_index]['gps_vdop'] ) + "\n"
+                text = text + "GPS num sv in veiw : " + str( dataFrame.iloc[frame_index]['gps_num_sv_in_view'] ) + "\n"
                 
             x , y       = 10 , 30
             #font        = cv2.FONT_HERSHEY_SIMPLEX
@@ -1485,9 +1503,13 @@ class SensorAnalyzerImpl:
                 cv2.putText( image , line , (x, y_pos) , font , font_scale , color , thickness , cv2.LINE_AA )
             cv2.imwrite( str(re.sub(r"frame_", "frame_opencv_", imgFile )) , image)
             frame_index = frame_index + 1
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __add_sensor_frame function takes " + str(total_time) + " seconds to run.")
             
     def __merge_jpeg_to_h264( self , movieFileName , framerate ):
         print("[Info] Start the __merge_jpeg_to_h264 function.")
+        start_unix_epoch_time = time.time()
         if shutil.which("ffmpeg") is not None:
             print(
                 "[Info] ffmpeg -framerate " + str(framerate) +
@@ -1503,6 +1525,9 @@ class SensorAnalyzerImpl:
         else:
             print("[Warn] Install it with the following command.")
             print("[Warn] apt install -y ffmpeg")
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __merge_jpeg_to_h264 function takes " + str(total_time) + " seconds to run.")
             
     def doSensorAnalyzerImplImpl( self ):
         print("[Info] Start the doSensorAnalyzerImplImpl function.")
