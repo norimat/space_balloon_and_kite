@@ -6,6 +6,7 @@
 |-----------------------------------------------|--------------------|
 | 2025/05/04 | 新規作成 |
 | 2025/05/21 | 「1. space_balloon.py概要」について<br>　「1-2. クラス構成」の図修正<br>　「1-3-1. 実行オプション」へオプション追加<br>　「1-4-3.モード別クラスデータパス」の図修正<br>「4. カメラモジュールを用いた動画取得について」について<br>　「4-3. センサーデータ解析モード時の動画ファイル」追加<br>「8. ICM-20948を用いた加速度、角速度および地磁気の取得について」を追加<br>「9. IVK172 G-Mouse USB GPSを用いた計測データの取得について」を追加<br>「11. 今後の課題」について<br>　「11-4. 動画データと計測データのハードウェア同期」を追加<br>「付録」について<br>　「Python実行環境準備」へライブラリ追加<br>　「I2C通信」へICM-20948追加<br>　「カメラモジュールの比較」へRaspberry Pi HQ Cameraを追加<br>　「Raspberry Piのスペック表」へCPUコア数追加<br>　「消費電力の見積り」の内容修正<br>　「GoogleEarth Proでの可視化」を追加<br>「参考情報」を追加 |
+| 2025/05/27 | 「付録」について<br>　「Raspberry Pi OSの準備」を更新<br>　「Ubuntu 22.04.2 LTSでの解析環境準備」を追加 |
 
 ## 1. space_balloon.py概要
 
@@ -211,7 +212,19 @@ MPU9250は生産終了に伴い未実装となっている。
 - temperatureはICM-20948から取得した温度を表している。
 
 ```text
-ICM-20948を5Vの繋いだところ、発熱し破損したため後日追加
+elapsed_time  start_epoch_time  unix_epoch_time   ax   ay     az   gx   gy   gz    mx   my    mz  temperature
+    0.724749      1.748054e+09     1.748054e+09  184  -32  16360   50  291  165  1412   32  1412    30.249109
+    0.746918      1.748054e+09     1.748054e+09  336   -8  16480   45  133   63  1407   19  1407    30.249109
+    0.790705      1.748054e+09     1.748054e+09   56 -296  16592  145  167    1  1406   15  1406    30.201186
+    0.814097      1.748054e+09     1.748054e+09 -128 -200  16424  199   90  533  1406   15  1406    30.153263
+    0.843100      1.748054e+09     1.748054e+09  -80 -336  16552  179   51  163  1407   24  1407    30.249109
+         ...               ...              ...  ...  ...    ...  ...  ...  ...   ...  ...   ...          ...
+   48.532524      1.748054e+09     1.748054e+09  104  104  16384   -9 -105    8  1274 -192  1274    30.584569
+   48.560240      1.748054e+09     1.748054e+09  272   96  16512 -100  228  -56  1274 -192  1274    30.728337
+   48.600042      1.748054e+09     1.748054e+09   64  152  16608   -8   85 -128  1269 -197  1269    30.536646
+   48.637256      1.748054e+09     1.748054e+09  280  200  16368 -100  186  288  1285 -185  1285    30.392877
+   48.669919      1.748054e+09     1.748054e+09  288  184  16448   97  129   21  1288 -180  1288    30.680415
+
 ```
 
 
@@ -373,7 +386,12 @@ Pythonのコードでは以下のようにlibcamera-vidを呼び出している�
 
 ```py
     def __start_camera_module( self ):
-        time.sleep(1)
+        while True:
+            if  SensorWrapper.bme280_startedFlg and  SensorWrapper.mpu6050_startedFlg and  SensorWrapper.mpu9250_startedFlg and SensorWrapper.icm20948_startedFlg and SensorWrapper.gps_startedFlg:
+                break
+            else:
+                time.sleep(1)
+
         subprocess.run(
             "libcamera-vid --framerate "    + str( self.__framerate) +
             " --bitrate "                   + str( self.__bitrate ) +
@@ -412,6 +430,7 @@ libcamera-vidの呼び出ではオプションで以下を指定している。
 ```py
     def __separation_h264_to_jpeg( self , movieFileName ):
         print("[Info] Start the __separation_h264_to_jpeg function.")
+        start_unix_epoch_time = time.time()
         if shutil.which("ffmpeg") is not None:
             print("[Info] ffmpeg -i " + movieFileName + " -qscale:v 2 tmp/frame_%08d.jpg")
             subprocess.run(
@@ -422,7 +441,10 @@ libcamera-vidの呼び出ではオプションで以下を指定している。
                 text           = True
             )
         else:
-            print("[Warn] apt install -y ffmpeg")       
+            print("[Warn] apt install -y ffmpeg")
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __separation_h264_to_jpeg function takes " + str(total_time) + " seconds to run.")
 ```
 
 `__separation_h264_to_jpeg`関数でH.264動画をJPEGに分割するのに`ffmpeg`コマンドを用いて分割している。
@@ -435,6 +457,7 @@ $ ffmpeg -i ./output/video_UNIXエポックタイム.h264 -qscale:v 2 tmp/frame_
 ```py
     def __merge_jpeg_to_h264( self , movieFileName , framerate ):
         print("[Info] Start the __merge_jpeg_to_h264 function.")
+        start_unix_epoch_time = time.time()
         if shutil.which("ffmpeg") is not None:
             print(
                 "[Info] ffmpeg -framerate " + str(framerate) +
@@ -450,6 +473,9 @@ $ ffmpeg -i ./output/video_UNIXエポックタイム.h264 -qscale:v 2 tmp/frame_
         else:
             print("[Warn] Install it with the following command.")
             print("[Warn] apt install -y ffmpeg")
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __merge_jpeg_to_h264 function takes " + str(total_time) + " seconds to run.")
 ```
 
 `__merge_jpeg_to_h264`関数でJPEG画像を動画をまとめるのにも`ffmpeg`コマンドを用いてまとめている。
@@ -1435,7 +1461,40 @@ MPU6050の端子説明を以下に示す。
 
 ### Raspberry Pi OSの準備
 
-作成中
+Raspberry Pi OSのインストール構成を設定していく。
+Raspberry Pi Imagerは[参考情報](#参考情報)にリンクを記載してある。
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part1.svg" width= "500px" >
+
+まず、デバイスからどのRaspberry piにするか決定する。
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part2.svg" width= "500px" >
+
+OSを選択する。OSには「Legacy, 32-bit:Bullseye」および「32bit:Bookwarm」がある。
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part3.svg" width= "500px" >
+
+インストール先SDカードを選択する。間違えたインストール先を選択するとデータが消えるため要注意。
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part4.svg" width= "500px" >
+
+構成設定が完了したら「次へ」ボタンを押し、インストールを開始する。
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part5.svg" width= "500px" >
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part6.svg" width= "500px" >
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part7.svg" width= "500px" >
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part8.svg" width= "500px" >
+
+完了したらSDカードを取り出し、Raspberry piへ差し込む。
+
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part9.svg" width= "500px" >
+
+Raspberry Piに電力供給すればSDカードから起動できる。
+
+起動後は、Bluetoothの設定、Raspbianユーザーの作成、Wi-Fiの設定およびソフトウェアアップデートの確認をした後、デスクトップ画面へ遷移する。
 
 ### I2C通信およびSSH接続の有効化
 
@@ -1473,6 +1532,7 @@ $ sudo raspi-config
 
 
 ### カメラモジュールの比較
+
 |仕様|Camera Module V2|Raspberry Pi HQ Camera|Camera Module V3|
 |--|--|--|--|
 |搭載センサー|Sony IMX219|Sony IMX477|Sony IMX708|
@@ -1487,8 +1547,6 @@ $ sudo raspi-config
 |GPIOピン|なし|3ピン端子(GND,3.3V,CAM_GPIO)|なし|
 |I2C接続/リボン|15ピンCSIリボン|15ピンCSIリボンI2C制御あり|15ピンCSIリボン|
 |推奨用途|一般撮影、教育、軽量システム|高画質静止画、望遠、産業検査|オートフォーカスが必要な動画・写真撮影|
-
-
 
 ### Raspberry Piのスペック表
 
@@ -1640,6 +1698,224 @@ kmlファイルを読み込むことでGoogleEarth Proで可視化すること�
 
 作成中(映像を取得した時の実際に動かしてみたときの結果を記載予定)
 
+### 他PCを用いたデータ解析例
+
+Raspberry Pi 4やZero 2 Wを使って取得動画を解析すると1分程度の動画ファイルだけで5~10分程度の時間がかかってくる。
+より性能の高いPCで解析できるよう今回はVirtual Box上の仮想マシンでUbuntuを起動して解析を実施する。
+
+なお、GPUを用いた解析を行う場合はVirtual Box上の仮想マシンでなく、物理マシンに直接Ubuntuなどをインストールして環境構築をすることを推奨する。(Virtual Box上でも設定可能な場合があるが設定が困難な様子)
+
+#### 他PCを用いた環境概要
+
+|項目| OS | CPU | メモリ|
+|--|--|--|--|
+|物理マシン| Windows 11 Home | Intel(R) Core(TM) i9-10900 CPU @ 2.80GHz<br>10コア | 64GB |
+|仮想マシン| Ubuntu 22.04.2 LTS | 4コア | 40GB | 
+|物理マシン| Raspbian  | Broadcom BCM2711,1.5GHz クアッドコア ARM Cortex-A72<br>4コア | 4GB |
+
+#### 他PCを用いた実行時間比較
+
+1時間以上の動画では比較していないが、1、2分程度で差を確認する。
+
+| 動画時間 | PC | 動画からフレームに<br>分割する時間 | フレームにセンサーデータを<br>埋め込む時間 | 埋め込みフレームデータを<br>動画に変換する時間 |
+|--|--|--|--|--|
+| 約1分| Ubutu 22.04 PC<br>(仮想マシン) | 7秒 | 20秒 | 43秒 |
+|| Raspberry Pi 4<br>(マイコン) | 約1分 | 約6分 | 約5分 |
+| 約2分| Ubutu 22.04 PC<br>(仮想マシン) | 14秒 | 48秒 | 約1分 |
+|| Raspberry Pi 4<br>(マイコン) | 約3分 | 約11分 | 約8分 |
+
+上記結果から4時間の動画を変換する場合、Raspberry Pi 4だと2、3日程度かかる想定となる。
+
+#### Ubuntu 22.04.2 LTSでの解析環境準備
+
+#### VirtualBoxでの仮想マシン作成およびUbuntuの起動
+
+仮想マシンを作成し、OS(Ubuntu)をインストールする手順を説明する。
+
+まず、仮想マシンを新規で作成する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part1.svg" width= "600px" >
+
+OS選択画面で赤枠を埋める。
+名前および保存先フォルダは任意で、ISOイメージはUbuntuのページから事前にダウンロードしてから選択する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part2.svg" width= "600px" >
+
+割り当てメモリとCPUを選択する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part3.svg" width= "600px" >
+
+初期ユーザーを作成する。
+画像では一般ユーザーでvboxuser、パスワードにchagemeを設定している。
+このパスワードrootユーザーのパスワードとなる。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part4.svg" width= "600px" >
+
+ディスク容量を割り当てる。
+(※後で変更は可能であるが、変更時にUbuntuのディスクチェックが動き、長時間起動できなくなることがあるため、初回で余裕のある容量にしておいた方が良い。)
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part5.svg" width= "600px" >
+
+構成最終チェックをして問題なければUbuntuのインストールが開始する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part6.svg" width= "600px" >
+
+#### Ubuntuでターミナルが起動しないときの設定
+
+Ubuntuで作業する際にターミナルが起動しないことがある。以下設定をする事で解決することがあるため発生した際は確認する。
+
+Ctrl+Alt+F3を押しCLIを起動する。
+以下画面が出たらCLIで起動できている。
+
+<img src="fig/Troubleshooting_Terminal_Startup_Issues_Part1.svg" width= "600px" >
+
+ubuntuインストール時に設定したユーザー(ここではvboxuser)でログインする。
+パスワードも設定したパスワードとなる。
+ログイン後に、以下コマンドでrootユーザーに切り替える。
+パスワードはUbuntuインストール時に設定したパスワードとなる。
+
+<img src="fig/Troubleshooting_Terminal_Startup_Issues_Part2.svg" width= "600px" >
+
+rootユーザに変更後、エディタで`/etc/default/locale`を開き以下の箇所を確認し変更をする。
+
+```sh
+$ cat /etc/default/locale
+#  File generated by update-locale
+LANG="en_US"
+LANGUAGE="en_US:"
+LC_NUMERIC="ja_JP.UTF-8"
+LC_TIME="ja_JP.UTF-8"
+LC_MONETARY="ja_JP.UTF-8"
+LC_PAPER="ja_JP.UTF-8"
+LC_NAME="ja_JP.UTF-8"
+LC_ADDRESS="ja_JP.UTF-8"
+LC_TELEPHONE="ja_JP.UTF-8"
+LC_MEASUREMENT="ja_JP.UTF-8"
+LC_IDENTIFICATION="ja_JP.UTF-8"
+```
+
+```sh
+$ vi /etc/default/locale
+#  File generated by update-locale
+LANG="en_US.UTF-8" #ここを変更
+LANGUAGE="en_US:"
+LC_NUMERIC="ja_JP.UTF-8"
+LC_TIME="ja_JP.UTF-8"
+LC_MONETARY="ja_JP.UTF-8"
+LC_PAPER="ja_JP.UTF-8"
+LC_NAME="ja_JP.UTF-8"
+LC_ADDRESS="ja_JP.UTF-8"
+LC_TELEPHONE="ja_JP.UTF-8"
+LC_MEASUREMENT="ja_JP.UTF-8"
+LC_IDENTIFICATION="ja_JP.UTF-8"
+```
+
+変更後、`reboot`コマンドで再起動する。
+
+#### Ubuntuでユーザを追加しroot権限を付与する方法
+
+編集中
+
+#### WindowsからUbuntuにTeraTermでSSH接続する設定
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part1.svg" width= "500px" >
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part2.svg" width= "500px" >
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part3.svg" width= "500px" >
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part4.svg" width= "500px" >
+
+#### Ubuntuのスクリーンセイバー設定
+
+<img src="fig/How_to_Configure_the_Screensaver.svg" width= "500px" >
+
+#### Ubuntuのキーボード設定
+
+<img src="fig/How_to_Configure_the_Keyboard.svg" width= "500px" >
+
+#### Ubuntuのディスプレイ設定
+
+<img src="fig/How_to_Configure_the_Display.svg" width= "500px" >
+
+#### Windows VirtualBox上でWindowsからUbuntuにコピー&ペーストする設定
+
+WindowsだコピーしたテキストをUbuntuに貼り付けたい場合、以下設定が必要である。
+
+まず、VirtualBoxのメニューからデバイスをクリックする。
+クリックすると、「クリップボードの共有」メニューが出る。
+そこから「双方向」を選択する。
+次に再度デバイスをクリックし、「Guest Additions CDイメージの挿入...」をクリックする。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part1.svg" width= "500px" >
+
+Ubuntuの左メニューバーにディスクアイコンが出るためクリックする。
+「VBoxLinuxAdditions.run」を右クリックしPropertiesをクリックする。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part2.svg" width= "500px" >
+
+Parent folderの欄に記載のパスをコピーしておく。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part3.svg" width= "500px" >
+
+ターミナルを開き、rootユーザーに切り替える。
+切り替え後、cdコマンドで先ほどコピーしたパスへ移動する。
+移動後、VBoxLinuxAdditions.runを実行する。
+実行が終了すれば、コピー&ペーストが可能となる。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part4.svg" width= "500px" >
+
+#### Raspbian と合わせたPythonライブラリのインストール
+
+[Python実行環境準備](#Python実行環境準備)に記載した内容はPython仮想環境も構築を含めUbuntu 22.04.2 LTS上で実施してある前提として追加で必要なパッケージ以下に記載する。
+
+なお、`libopenjpeg-dev`およびGPIOやUSBからデータを取得するためのPythonライブラリはUbuntu 22.04.2 LTSでは使わないためインストール不要である。
+
+[Python実行環境準備](#Python実行環境準備)に記載した`apt-get`でインストール可能なパッケージはインストールしてから以下を実行する。
+
+```sh
+$ sudo apt-get install -y build-essential
+$ sudo apt-get install -y libffi-dev
+$ sudo apt-get install -y libssl-dev
+$ sudo apt-get install -y zlib1g-dev
+$ sudo apt-get install -y liblzma-dev
+$ sudo apt-get install -y libbz2-dev
+$ sudo apt-get install -y libreadline-dev
+$ sudo apt-get install -y libsqlite3-dev
+$ sudo apt-get install -y libopencv-dev
+$ sudo apt-get install -y tk-dev
+$ sudo apt-get install -y git
+$ git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+# ダウンロードが開始(ログ省略)
+$ echo '' >> ~/.bashrc
+$ echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+$ echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+$ echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
+$ source ~/.bashrc
+$ pyenv install 3.9.2
+# インストールが開始(ログ省略)
+$ pyenv global 3.9.2
+```
+
+pythonのバージョンを確認し3.9.2になっていれば問題ない。
+Python仮想環境を3.9.2で構築する。
+
+
+#### MP4動画を確認するためのパッケージインストール
+
+UbuntuでMP4に変換した動画を再生するのに以下パッケージをインストールすることで可能である。
+
+```sh
+$ sudo apt-get install ubuntu-restricted-extras
+```
+OKにカーソルをあわせEnterキーを押す。
+
+<img src="fig/How_to_Install_ubuntu_restricted_extras_Part1.svg" width= "500px" >
+
+YesにカーソルをあわせEnterキーを押す。
+
+<img src="fig/How_to_Install_ubuntu_restricted_extras_Part2.svg" width= "500px" >
+
 ## 参考情報
 - Raspberry Pi OS
   - [Raspberry Pi OS](https://www.raspberrypi.com/software/)
@@ -1660,10 +1936,10 @@ kmlファイルを読み込むことでGoogleEarth Proで可視化すること�
   - [絶縁耐熱テープ](https://www.amazon.co.jp/dp/B08GP32DS9?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1)
   - [BNO085 9 軸センサーモジュール](https://www.amazon.co.jp/dp/B0DK2XDQ4G?ref=ppx_yo2ov_dt_b_fed_asin_title)
   - スイッチサイエンス
-    - [Arducam IMX477搭載 HQ camera(6 mm CSレンズ付き)](https://www.switch-science.com/products/6880?_pos=7&_sid=9ab8369fc&_ss=r)
-    - [Arducam IMX477搭載 HQ camera](https://www.switch-science.com/products/7051?srsltid=AfmBOoqLVns4HMxpaPJ_fpm7YE4BznPlN56gxoLPrypVU7RpUP7Fn-qB)
+    - [Arducam IMX477搭載 Raspberry Pi用電動式フォーカス HQ Camera](https://www.switch-science.com/products/6878?srsltid=AfmBOorNcQFrCMF4XFcC0mjWJ0WHqSZkA_kR5Jn2Xsk-jJXXz0kwXcwJ)
   - その他
     - [GoogleEarth](https://earth.google.com/)
     - [GoogleEarth Pro](https://www.google.com/earth/about/versions/)
+    - [GoogleEarth Pro Download for Ubuntu 22.04 LTS](https://www.google.com/earth/download/gep/agree.html)
     - [NATIONAL WEATHER SERVICE](https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/)
     
