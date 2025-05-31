@@ -5,8 +5,9 @@
 | 日付 | 変更概要 |
 |-----------------------------------------------|--------------------|
 | 2025/05/04 | 新規作成 |
-| 2025/05/21 | 「1. space_balloon.py概要」について<br>　「1-2. クラス構成」の図修正<br>　「1-3-1. 実行オプション」へオプション追加<br>　「1-4-3.モード別クラスデータパス」の図修正<br>「4. カメラモジュールを用いた動画取得について」について<br>　「4-3. センサーデータ解析モード時の動画ファイル」追加<br>「8. ICM-20948を用いた加速度、角速度および地磁気の取得について」を追加<br>「9. IVK172 G-Mouse USB GPSを用いた計測データの取得について」を追加<br>「11. 今後の課題」について<br>　「11-4. 動画データと計測データのハードウェア同期」を追加<br>「付録」について<br>　「Python実行環境準備」へライブラリ追加<br>　「I2C通信」へICM-20948追加<br>　「カメラモジュールの比較」へRaspberry Pi HQ Cameraを追加<br>　「Raspberry Piのスペック表」へCPUコア数追加<br>　「消費電力の見積り」の内容修正<br>　「GoogleEarth Proでの可視化」を追加<br>「参考情報」を追加 |
-| 2025/05/27 | 「付録」について<br>　「Raspberry Pi OSの準備」を更新<br>　「Ubuntu 22.04.2 LTSでの解析環境準備」を追加 |
+| 2025/05/21 | 「[1. space_balloon.py概要](#1-space_balloon.py概要)」について<br>　「[1-2. クラス構成](#1-2-クラス構成)」の図修正<br>　「[1-3-1. 実行オプション](#1-3-1-実行オプション)」へオプション追加<br>　「[1-4-3.モード別クラスデータパス](#1-4-3モード別クラスデータパス)」の図修正<br>「[4. カメラモジュールを用いた動画取得について](#4-カメラモジュールを用いた動画取得について)」について<br>　「[4-3. センサーデータ解析モード時の動画ファイル](#4-3-センサーデータ解析モード時の動画ファイル)」追加<br>「[8. ICM-20948を用いた加速度、角速度および地磁気の取得について](#8-ICM-20948を用いた加速度、角速度および地磁気の取得について)」を追加<br>「[9. IVK172 G-Mouse USB GPSを用いた計測データの取得について](#9-IVK172-G-Mouse-USB-GPSを用いた計測データの取得について)」を追加<br>「[11. 今後の課題](#11-今後の課題)」について<br>　「[11-4. 動画データと計測データのハードウェア同期](#11-4-動画データと計測データのハードウェア同期)」を追加<br>「[付録](#付録)」について<br>　「[Python実行環境準備](#Python実行環境準備)」へライブラリ追加<br>　「[I2C通信](#I2C通信)」へICM-20948追加<br>　「[カメラモジュールの比較](#カメラモジュールの比較)」へRaspberry Pi HQ Cameraを追加<br>　「[Raspberry Piのスペック表](#Raspberry-Piのスペック表)」へCPUコア数追加<br>　「[消費電力の見積り](#消費電力の見積り)」の内容修正<br>　「[GoogleEarth Proでの可視化](#GoogleEarth-Proでの可視化)」を追加<br>「[参考情報](#参考情報)」を追加 |
+| 2025/05/27 | 「[付録](#付録)」について<br>　「[Raspberry Pi OSの準備](#Raspberry-Pi-OSの準備)」を更新<br>　「[Ubuntu 22.04.2 LTSでの解析環境準備](#Ubuntu-22042-LTSでの解析環境準備)」を追加 |
+| 2025/05/31 | 「[付録](#付録)」について<br>　「[I2C通信における性能比較](#I2C通信における性能比較)」を追加 |
 
 ## 1. space_balloon.py概要
 
@@ -796,6 +797,33 @@ MPU6050では、デバイス内部で加速度3種、角速度3種および温�
             return val - 65536
 ```
 
+`read_i2c_block_data`関数でセンサーから読み込んだ場合の修正例を以下に示す。
+
+```py
+def read_sensor_data():
+    # 加速度6バイト + 温度2バイト + ジャイロ6バイト = 14バイト一括読み取り
+    data = bus.read_i2c_block_data(MPU6050_ADDR, ACCEL_XOUT_H, 14)
+
+    def convert(h, l):
+        value = (h << 8) | l
+        if value > 32767:
+            value -= 65536
+        return value
+
+    acc_x = convert(data[0], data[1])
+    acc_y = convert(data[2], data[3])
+    acc_z = convert(data[4], data[5])
+    temp  = convert(data[6], data[7])
+    gyro_x = convert(data[8], data[9])
+    gyro_y = convert(data[10], data[11])
+    gyro_z = convert(data[12], data[13])
+
+    return (
+        acc_x / 16384.0, acc_y / 16384.0, acc_z / 16384.0,
+        gyro_x / 131.0, gyro_y / 131.0, gyro_z / 131.0
+    )
+```
+
 ## 7. MPU9250を用いた加速度、角速度および地磁気の取得について
 
 現在、MPU9250生産終了のためICM20948に以降予定。
@@ -1317,9 +1345,9 @@ Added user アカウント名.
 
 ### IPアドレスの固定
 
-Raspberry Pi OSがBullseyeおよびRaspberry Pi Zero 2 Wの前提で説明を記載。
+Raspberry Pi OSがBullseyeおよびBookwarmで説明を記載。
 
-現在のIPアドレスは以下コマンドで調べられる。
+まず、現在のIPアドレスは以下コマンドで調べられる。
 
 ```sh
 $ ifconfig
@@ -1342,6 +1370,8 @@ wlan0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX packets 95607  bytes 53115827 (50.6 MiB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
+
+#### BullseyeでのIPアドレス固定
 
 wlan0がWi-Fiで接続しているインタフェース名でinetがIPv4アドレスとなっている。
 ネットマスクは255.255.255.0で24ビットがネットワーク部となっている。
@@ -1386,6 +1416,68 @@ default via 192.168.0.1 dev wlan0 src 192.168.0.67 metric 302
 ```
 
 default via 192.168.0.1がルーターのIPアドレスとなる。
+
+#### BookwarmでのIPアドレス固定
+
+BookwarmではRaspberry Pi OS設定時などにWi-Fiに接続済みという前提で説明を記載する。
+
+接続済みの前提でまず、SSIDを確認する。
+
+```sh
+$ wpa_cli status
+Selected interface 'wlan0'
+bssid=xx:xx:xx:xx:xx:xx
+freq=5240
+ssid=TP-Link_HOGE
+id=0
+mode=station
+wifi_generation=5
+pairwise_cipher=CCMP
+group_cipher=CCMP
+key_mgmt=WPA2-PSK
+wpa_state=COMPLETED
+ip_address=192.168.0.55
+p2p_device_address=xx:xx:xx:xx:xx:xx
+address=xx:xx:xx:xx:xx:xx
+uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ieee80211ac=1
+```
+
+`ssid=TP-Link_HOGE`がSSIDとなる。
+
+次にIPアドレス固定のため以下ファイルを編集する。
+`ipv4`の箇所へ固定する設定を追記する。
+
+```sh
+$ sudo vi /etc/NetworkManager/system-connections/SSID名.nmconnection # SSID名はTP-Link_HOGE.nmconnection
+[connection]
+id=SSID名
+uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+type=wifi
+interface-name=wlan0
+
+[wifi]
+mode=infrastructure
+ssid=SSID名
+
+[wifi-security]
+auth-alg=open
+key-mgmt=wpa-psk
+psk=Wi-Fiのパスワード
+
+# ここへ設定するIPアドレスを記述する。
+[ipv4]
+method=auto
+address1=192.168.0.55/24,192.168.0.1
+dns=8.8.8.8;
+method=manual
+
+[ipv6]
+addr-gen-mode=default
+method=auto
+
+[proxy]
+```
 
 ### I2C通信
 
@@ -1433,7 +1525,6 @@ ICM-20948の端子説明を以下に示す。
 | **ACL** | Auxiliary Clock / AUX\_CL | 磁気センサとのI2C通信(内部用)。通常外部配線は不要。               |
 | **ADA** | Auxiliary Data / AUX\_DA  | 同上。磁気センサとのデータ通信ライン(内部用)。                   |
 
-
 BME280の端子説明を以下に示す。
 
 | ピン名        | 機能                      | 説明                                                                 |
@@ -1458,6 +1549,180 @@ MPU6050の端子説明を以下に示す。
 | **AD0** | アドレス選択          | I2Cでは、**接地(GND)するとアドレス0x68**、**VCCにするとアドレス0x69** になる。|
 | **INT** | 割り込み出力          | モーションイベントなどの割り込み信号。GPIOピンに接続して使用可能。
 
+### I2C通信における性能比較
+
+Raspberry Pi OSがBullseyeおよびBookwarmで説明を記載。
+
+#### BullseyeでのI2C通信クロック確認
+
+BullseyeでのI2C通信クロックは以下ファイルに記載してある内容で確認できる。
+
+```sh
+sudo cat /boot/config.txt | grep i2c_arm_baudrate
+dtparam=i2c_arm_baudrate=400000
+```
+
+結果が表示されない場合、デフォルト値の100kHz(=100000)で設定してある。
+
+#### BookwarmでのI2C通信クロック確認
+
+```sh
+sudo cat /boot/firmware/config.txt | grep i2c_arm_baudrate
+dtparam=i2c_arm_baudrate=400000
+```
+
+結果が表示されない場合、デフォルト値の100kHz(=100000)で設定してある。
+
+#### I2C通信クロックの変更
+
+`/boot/config.txt`または`/boot/firmware/config.txt`にI2Cクロックの設定を追記することでクロック周波数を変更することが可能である。
+```sh
+sudo vi /boot/firmware/config.txt
+# For more options and information see
+# http://rptl.io/configtxt
+# Some settings may impact device functionality. See link above for details
+
+# Uncomment some or all of these to enable the optional hardware interfaces
+dtparam=i2c_arm=on
+#dtparam=i2s=on
+#dtparam=spi=on
+dtparam=i2c_arm_baudrate=400000
+
+            省略
+```
+
+`dtparam=i2c_arm_baudrate=400000`と追記した場合、``400KHzに変更できる。
+変更後、再起動することで設定を反映できる。
+
+```sh
+$ sudo reboot
+```
+
+#### I2C通信クロック別実行時間計測
+
+今回、MPU6050およびBME280を用いて、クロック周波数別で比較を行う。
+
+比較は100回I2C通信バスからデータ取得を実施した際の実行時間を計測する。
+
+以下に前提条件を記載する。
+- 確認するI2C通信バスクロック
+  - 100KHz
+  - 400Khz
+- MPU6050
+  - [6-2. Pythonコードの説明](#6-2-Pythonコードの説明)に示すように関数別でも比較する。
+    - `read_byte_data`関数を使用する場合
+    - `read_i2c_block_data`関数を使用する場合
+- BM280
+  - 100KHzと400KHzで比較する。
+  - 温度、湿度、気圧算出まで行い比較する。
+
+比較結果表は以下となる。
+
+| センサ名 | 関数 |  100KHz | 400KHz | 
+|--|--|--|--|
+| MPU6050 | `read_byte_data`関数      | 0.5223sec | 0.1544sec  |
+|         | `read_i2c_block_data`関数 | 0.1775sec | 0.0454sec  |
+| BME280  | `read_i2c_block_data`関数 | 1.8098sec | 1.6865sec |
+
+まず、MPU6050の比較結果から読み取れる内容としては以下がある。
+- 1回あたりのI2Cバス通信でのデータ取得平均時間(100で割る)
+  - `read_byte_data`関数の場合
+    - 100KHzは5.2msec(0.005223sec)
+    - 400KHzは1.5msec(0.001544sec)
+  - `read_i2c_block_data`関数の場合
+    - 100KHzは1.7msec(0.001775sec)
+    - 400KHzは0.4msec(0.000454sec)
+これら結果から、`read_i2c_block_data`関数の方がI2C通信バス負荷を少なく、実行時間を短く処理できる。
+また、ChatGPT調べ結果では、`read_byte_data`関数で取得すると、CPUをI/O処理で使用する頻度が上がり、数mWの増加が通信中に発生する見積りとなる。
+よって、`read_i2c_block_data`関数で制御が推奨となる。
+
+次に、BME280の比較結果について以下が読み取れる。
+- 1回あたりのI2Cバス通信でのデータ取得平均時間(100で割る)
+  - 100KHzは1.8msec(0.0018098sec)
+  - 400KHzは1.6msec(0.0016865sec)
+
+これらの結果から、400KHzの方が高速にデータを取得できる。
+
+BME280については、今回Pythonのライブラリを用いて温度・湿度・気圧を取得している。
+MPU6050とBME280と比較すると、BME280の方が取得データ容量が少ないが、実行時間が**100KHzで3.6倍**、**400KHzで10倍**も増加している。
+これは、センサー生データ取得後にCPUを用いた補正計算量の差にあると思われる。
+MPU6050は生データの補正計算量が[6-2. Pythonコードの説明](#6-2-Pythonコードの説明)にあるように除算が1回および温度の補正に加算が2回程度である。
+
+一方、BME280はライブラリ内部の演算処理で多くの除算・乗算・加算が行われる。
+一方、ライブラリを使わずセンサー生データを取得しユーザー記述で補正計算し取得も可能である。
+しかし、変換をする場合、CPUを用いて処理をすることからユーザー記述により消費電力・実行時間が増加するため注意が必要である。
+センサー生データで問題ないデータの場合は後ほど補正計算するようにした方が良い場合があるため、使用用途を検討した上で補正計算の実施は検討した方が良い。
+
+例1)MPU6050で姿勢制御をしたい場合、リアルタイムで補正計算しないとデータが使用できない。
+
+例2)BME280で気圧から高度を取得し、高度を後日確認し状況把握したい場合は生データでも問題ない。
+
+さらに、I2C通信クロック周波数についても、I2Cバス上に接続するデバイスおよびデバイス使用用途によって変更した方が良い。
+これは、周波数が高いほど消費電力が高い一方、バス通信占有時間に伴う消費電力増加がトレードオフの関係となる。
+ChatGPT調べでは、100KHzと400KHzで大きな差はないが、複数デバイス接続・0.033secで複数回取得をしたい用途であれば、400KHzが推奨とされている。
+
+#### I2C通信バスの制約
+
+今回のPythonスクリプトではセンサー取得はマルチスレッドで非同期・排他制御無しで実施している。
+しかし、I2C通信バスにおいて、複数デバイスからデータを同時に取得するリクエストを出すと以下問題がある。
+- データの欠落
+- 通信エラー
+- バスロック・ハングアップ
+
+上記から、排他制御を実施してリクエストを同時に発生しないように実装が必要となる。
+
+### TeraTermで公開鍵認証で接続する方法
+
+Windowsからssh接続し制御したい場合TeraTermを用いて接続できる。
+接続時にパスワード認証が必要となるが、公開鍵認証でパスワード認証せずに接続できる。
+
+まず、Raspberry Piにssh接続をして公開鍵を生成する。
+
+```sh
+$ ssh-keygen -t rsa
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/ユーザ名/.ssh/id_rsa): Enterを押す
+Enter passphrase (empty for no passphrase): Enterを押す
+Enter same passphrase again: Enterを押す
+Your identification has been saved in /home/ユーザ名/.ssh/id_rsa
+Your public key has been saved in /home/ユーザ名/.ssh/id_rsa.pub
+The key fingerprint is:
+SHA256:TFjj5HtSq/yWaP2aqPG4iUqAPzWlQV0QTM8F4ZgXfmk ユーザ名@raspberrypi
+The key's randomart image is:
++---[RSA 3072]----+
+|    .+++Oo.      |
+|   .  o& + .     |
+|    . = X E      |
+|.    + + = .     |
+|o   +   S o      |
+| o . . . +       |
+|  +   . oo .     |
+| . . . =oo+.     |
+|  ... =+o.+o.    |
++----[SHA256]-----+
+```
+
+id_rsa.pubが公開鍵、id_rasが秘密鍵となる。
+
+```sh
+$ ls ~/.ssh
+id_rsa  id_rsa.pub
+```
+Authorized Keysへ公開鍵を登録する。
+
+```sh
+$ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+```
+
+WinSCPなどでWindows上に秘密鍵id_rsaを転送し、任意のフォルダに配置する。
+
+TeraTermの新しい接続画面で「ホスト(T)」の欄へ公開鍵認証をできるよう記載する。
+
+```text
+RaspberryPiのIPアドレス /auth=publickey /user=ユーザー名 /keyfile=任意のフォルダパス\id_ras
+
+例)192.168.0.55 /auth=publickey /user=iamuser_name /keyfile=C:\User\iamuser_windws_name\id_ras
+```
 
 ### Raspberry Pi OSの準備
 
@@ -1496,39 +1761,7 @@ Raspberry Piに電力供給すればSDカードから起動できる。
 
 起動後は、Bluetoothの設定、Raspbianユーザーの作成、Wi-Fiの設定およびソフトウェアアップデートの確認をした後、デスクトップ画面へ遷移する。
 
-### I2C通信およびSSH接続の有効化
 
-```sh
-$ sudo raspi-config
-```
-`3 Interface Options    Configure connections to peripherals`を選択する。
-
-<img src="fig/raspi-config_1.svg" width= "650px" >
-
-まず、SSHを有効にするため、`I2 SSH           Enable/disable remote command line access using SSH`を選択する。
-
-<img src="fig/raspi-config_2.svg" width= "650px" >
-
-はいを選択しEnter。
-
-<img src="fig/raspi-config_3.svg" width= "650px" >
-
-了解でEnter。
-
-<img src="fig/raspi-config_4.svg" width= "650px" >
-
-次にI2Cを有効にするため、`I5 I2C           Enable/disable automatic loading of I2C kernel module`を選択する。
-
-はいを選択しEnter。
-
-<img src="fig/raspi-config_5.svg" width= "650px" >
-
-了解でEnter。
-
-<img src="fig/raspi-config_6.svg" width= "650px" >
-
-最初の画面に戻りFinishを選択いEnter。
-その後、再起動する。
 
 
 ### カメラモジュールの比較
