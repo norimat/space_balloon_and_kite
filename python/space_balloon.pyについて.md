@@ -1591,7 +1591,7 @@ dtparam=i2c_arm_baudrate=400000
             省略
 ```
 
-`dtparam=i2c_arm_baudrate=400000`と追記した場合、``400KHzに変更できる。
+`dtparam=i2c_arm_baudrate=400000`と追記した場合、`400KHz`に変更できる。
 変更後、再起動することで設定を反映できる。
 
 ```sh
