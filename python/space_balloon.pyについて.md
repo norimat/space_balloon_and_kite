@@ -5,7 +5,10 @@
 | 日付 | 変更概要 |
 |-----------------------------------------------|--------------------|
 | 2025/05/04 | 新規作成 |
-| 2025/05/21 | 「1. space_balloon.py概要」について<br>　「1-2. クラス構成」の図修正<br>　「1-3-1. 実行オプション」へオプション追加<br>　「1-4-3.モード別クラスデータパス」の図修正<br>「4. カメラモジュールを用いた動画取得について」について<br>　「4-3. センサーデータ解析モード時の動画ファイル」追加<br>「8. ICM-20948を用いた加速度、角速度および地磁気の取得について」を追加<br>「9. IVK172 G-Mouse USB GPSを用いた計測データの取得について」を追加<br>「11. 今後の課題」について<br>　「11-4. 動画データと計測データのハードウェア同期」を追加<br>「付録」について<br>　「Python実行環境準備」へライブラリ追加<br>　「I2C通信」へICM-20948追加<br>　「カメラモジュールの比較」へRaspberry Pi HQ Cameraを追加<br>　「Raspberry Piのスペック表」へCPUコア数追加<br>　「消費電力の見積り」の内容修正<br>　「GoogleEarth Proでの可視化」を追加<br>「参考情報」を追加 |
+| 2025/05/21 | 「[1. space_balloon.py概要](#1-space_balloonpy概要)」について<br>　「[1-2. クラス構成](#1-2-クラス構成)」の図修正<br>　「[1-3-1. 実行オプション](#1-3-1-実行オプション)」へオプション追加<br>　「[1-4-3.モード別クラスデータパス](#1-4-3モード別クラスデータパス)」の図修正<br>「[4. カメラモジュールを用いた動画取得について](#4-カメラモジュールを用いた動画取得について)」について<br>　「[4-3. センサーデータ解析モード時の動画ファイル](#4-3-センサーデータ解析モード時の動画ファイル)」追加<br>「[8. ICM-20948を用いた加速度、角速度および地磁気の取得について](#8-icm-20948を用いた加速度角速度および地磁気の取得について)」を追加<br>「[9. IVK172 G-Mouse USB GPSを用いた計測データの取得について](#9-IVK172-G-Mouse-USB-GPSを用いた計測データの取得について)」を追加<br>「[11. 今後の課題](#11-今後の課題)」について<br>　「[11-4. 動画データと計測データのハードウェア同期](#11-4-動画データと計測データのハードウェア同期)」を追加<br>「[付録](#付録)」について<br>　「[Python実行環境準備](#Python実行環境準備)」へライブラリ追加<br>　「[I2C通信](#I2C通信)」へICM-20948追加<br>　「[カメラモジュールの比較](#カメラモジュールの比較)」へRaspberry Pi HQ Cameraを追加<br>　「[Raspberry Piのスペック表](#Raspberry-Piのスペック表)」へCPUコア数追加<br>　「[消費電力の見積り](#消費電力の見積り)」の内容修正<br>　「[GoogleEarth Proでの可視化](#GoogleEarth-Proでの可視化)」を追加<br>「[参考情報](#参考情報)」を追加 |
+| 2025/05/27 | 「[付録](#付録)」について<br>　「[Raspberry Pi OSの準備](#Raspberry-Pi-OSの準備)」を更新<br>　「[Ubuntu 22.04.2 LTSでの解析環境準備](#Ubuntu-22042-LTSでの解析環境準備)」を追加 |
+| 2025/06/01 | 「[付録](#付録)」について<br>　「[I2C通信における性能比較](#I2C通信における性能比較)」を追加 |
+| 2025/06/03 | 「[付録](#付録)」について<br>　「[I2C通信バスのGPIOピン割り当て](#I2C通信バスのGPIOピン割り当て)」を追加 |
 
 ## 1. space_balloon.py概要
 
@@ -211,7 +214,19 @@ MPU9250は生産終了に伴い未実装となっている。
 - temperatureはICM-20948から取得した温度を表している。
 
 ```text
-ICM-20948を5Vの繋いだところ、発熱し破損したため後日追加
+elapsed_time  start_epoch_time  unix_epoch_time   ax   ay     az   gx   gy   gz    mx   my    mz  temperature
+    0.724749      1.748054e+09     1.748054e+09  184  -32  16360   50  291  165  1412   32  1412    30.249109
+    0.746918      1.748054e+09     1.748054e+09  336   -8  16480   45  133   63  1407   19  1407    30.249109
+    0.790705      1.748054e+09     1.748054e+09   56 -296  16592  145  167    1  1406   15  1406    30.201186
+    0.814097      1.748054e+09     1.748054e+09 -128 -200  16424  199   90  533  1406   15  1406    30.153263
+    0.843100      1.748054e+09     1.748054e+09  -80 -336  16552  179   51  163  1407   24  1407    30.249109
+         ...               ...              ...  ...  ...    ...  ...  ...  ...   ...  ...   ...          ...
+   48.532524      1.748054e+09     1.748054e+09  104  104  16384   -9 -105    8  1274 -192  1274    30.584569
+   48.560240      1.748054e+09     1.748054e+09  272   96  16512 -100  228  -56  1274 -192  1274    30.728337
+   48.600042      1.748054e+09     1.748054e+09   64  152  16608   -8   85 -128  1269 -197  1269    30.536646
+   48.637256      1.748054e+09     1.748054e+09  280  200  16368 -100  186  288  1285 -185  1285    30.392877
+   48.669919      1.748054e+09     1.748054e+09  288  184  16448   97  129   21  1288 -180  1288    30.680415
+
 ```
 
 
@@ -373,7 +388,12 @@ Pythonのコードでは以下のようにlibcamera-vidを呼び出している�
 
 ```py
     def __start_camera_module( self ):
-        time.sleep(1)
+        while True:
+            if  SensorWrapper.bme280_startedFlg and  SensorWrapper.mpu6050_startedFlg and  SensorWrapper.mpu9250_startedFlg and SensorWrapper.icm20948_startedFlg and SensorWrapper.gps_startedFlg:
+                break
+            else:
+                time.sleep(1)
+
         subprocess.run(
             "libcamera-vid --framerate "    + str( self.__framerate) +
             " --bitrate "                   + str( self.__bitrate ) +
@@ -412,6 +432,7 @@ libcamera-vidの呼び出ではオプションで以下を指定している。
 ```py
     def __separation_h264_to_jpeg( self , movieFileName ):
         print("[Info] Start the __separation_h264_to_jpeg function.")
+        start_unix_epoch_time = time.time()
         if shutil.which("ffmpeg") is not None:
             print("[Info] ffmpeg -i " + movieFileName + " -qscale:v 2 tmp/frame_%08d.jpg")
             subprocess.run(
@@ -422,7 +443,10 @@ libcamera-vidの呼び出ではオプションで以下を指定している。
                 text           = True
             )
         else:
-            print("[Warn] apt install -y ffmpeg")       
+            print("[Warn] apt install -y ffmpeg")
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __separation_h264_to_jpeg function takes " + str(total_time) + " seconds to run.")
 ```
 
 `__separation_h264_to_jpeg`関数でH.264動画をJPEGに分割するのに`ffmpeg`コマンドを用いて分割している。
@@ -435,6 +459,7 @@ $ ffmpeg -i ./output/video_UNIXエポックタイム.h264 -qscale:v 2 tmp/frame_
 ```py
     def __merge_jpeg_to_h264( self , movieFileName , framerate ):
         print("[Info] Start the __merge_jpeg_to_h264 function.")
+        start_unix_epoch_time = time.time()
         if shutil.which("ffmpeg") is not None:
             print(
                 "[Info] ffmpeg -framerate " + str(framerate) +
@@ -450,6 +475,9 @@ $ ffmpeg -i ./output/video_UNIXエポックタイム.h264 -qscale:v 2 tmp/frame_
         else:
             print("[Warn] Install it with the following command.")
             print("[Warn] apt install -y ffmpeg")
+        end_unix_epoch_time = time.time()
+        total_time = end_unix_epoch_time - start_unix_epoch_time
+        print("[Info] The __merge_jpeg_to_h264 function takes " + str(total_time) + " seconds to run.")
 ```
 
 `__merge_jpeg_to_h264`関数でJPEG画像を動画をまとめるのにも`ffmpeg`コマンドを用いてまとめている。
@@ -770,6 +798,33 @@ MPU6050では、デバイス内部で加速度3種、角速度3種および温�
             return val - 65536
 ```
 
+`read_i2c_block_data`関数でセンサーから読み込んだ場合の修正例を以下に示す。
+
+```py
+def read_sensor_data():
+    # 加速度6バイト + 温度2バイト + ジャイロ6バイト = 14バイト一括読み取り
+    data = bus.read_i2c_block_data(MPU6050_ADDR, ACCEL_XOUT_H, 14)
+
+    def convert(h, l):
+        value = (h << 8) | l
+        if value > 32767:
+            value -= 65536
+        return value
+
+    acc_x = convert(data[0], data[1])
+    acc_y = convert(data[2], data[3])
+    acc_z = convert(data[4], data[5])
+    temp  = convert(data[6], data[7])
+    gyro_x = convert(data[8], data[9])
+    gyro_y = convert(data[10], data[11])
+    gyro_z = convert(data[12], data[13])
+
+    return (
+        acc_x / 16384.0, acc_y / 16384.0, acc_z / 16384.0,
+        gyro_x / 131.0, gyro_y / 131.0, gyro_z / 131.0
+    )
+```
+
 ## 7. MPU9250を用いた加速度、角速度および地磁気の取得について
 
 現在、MPU9250生産終了のためICM20948に以降予定。
@@ -788,62 +843,80 @@ ICM-20948で計測可能なデータは以下である。
 ### 8-2. Pythonコードの説明
 
 内容作成中
-<!--
+
 ```py
-import math
-
-def calculate_heading(mag_x, mag_y):
-    """
-    地磁気センサのX軸・Y軸データから方位角を計算する。
-    :param mag_x: 地磁気のX成分（µT）
-    :param mag_y: 地磁気のY成分（µT）
-    :return: 方位角（0〜360度）
-    """
-    heading_rad = math.atan2(mag_y, mag_x)  # ラジアンで計算
-    heading_deg = math.degrees(heading_rad)  # 度に変換
-    if heading_deg < 0:
-        heading_deg += 360
-    return heading_deg
-
-# 例：センサからの磁場データ（µT）
-mag_x = 12.3
-mag_y = -45.6
-
-heading = calculate_heading(mag_x, mag_y)
-print(f"方位角（北 = 0°）: {heading:.2f}°")
+    def doIcm20948Impl(self):
+        print("[Info] Start the doIcm20948Impl function.")
+        try:
+            self.__start_unix_epoch_time = time.time()
+            outputThread                 = threading.Thread( target=self.__output_csv )
+            outputThread.start()
+            self.__imu.begin()
+            while True:
+                self.__read_sensor()
+                time.sleep(self.__interval)
+        except Exception as e:
+            print(e)
 ```
 
 ```py
-import math
-
-mag_x = 10.0
-mag_y = 10.0
-
-
-roll  = atan2(acc_y, acc_z)
-pitch = atan(-acc_x / (acc_y * sin(roll) + acc_z * cos(roll)))
-
-mag_x_comp = mag_x * cos(pitch) + mag_z * sin(pitch)
-mag_y_comp = mag_x * sin(roll) * sin(pitch) + mag_y * cos(roll) - mag_z * sin(roll) * cos(pitch)
-
-heading_rad = atan2(mag_y_comp, mag_x_comp)
-heading_deg = degrees(heading_rad)
-if heading_deg < 0:
-    heading_deg += 360
-
-
-heading = calculate_heading(mag_x, mag_y)
-print(f"方位角（北 = 0°）: {heading:.2f}°")
+    def __read_sensor( self ):
+        if self.__imu.dataReady():
+            self.__imu.getAgmt()
+            self.__ax          = self.__imu.axRaw
+            self.__ay          = self.__imu.ayRaw
+            self.__az          = self.__imu.azRaw
+            self.__gx          = self.__imu.gxRaw
+            self.__gy          = self.__imu.gyRaw
+            self.__gz          = self.__imu.gzRaw
+            self.__mx          = self.__imu.mxRaw
+            self.__my          = self.__imu.myRaw
+            self.__mz          = self.__imu.mxRaw
+            self.__temperature = (self.__imu.tmpRaw/333.87)+21
 ```
--->
 
-### 8-2. 方角と角度の設定
+### 8-2. 地磁気センサーのキャリブレーション
 
-ICM-20948の磁気センサーは地理的な真北とセンサーの物理的な向きを考慮していない。
-このことから、起動時のセンサーが向いている方向を0°とする。起動後から0°を基準に相対的な変化を取得する。
-よって、Pythonプログラム実行時にY軸方向が北を指すようにセンサーを設置し計測をすることで北=0°と設定できる。
+ICM-20948で地磁気を取得する場合、実際の計測(打ち上げ)前にキャリブレーションを行う必要がある。
+これは、算出精度を向上させるのに必要となる。
 
-Pythonコードで角度を求めた方法は方角を求める式となっている。
+キャリブレーションで取得した補正値をもとに計測時は補正後データを取得する。
+
+キャリブレーションは以下の条件に応じて実施する必要がある。
+
+| 条件 | キャリブレーション頻度 |
+|--|--|
+| センサーを固定して計測する場合 　　　　　　　　　　　　　| 事前に1回実施しておく |
+| 筐体・周囲の変化がある場合(機器の位置・姿勢が変わる場合) | その都度または環境が変わるたびに再キャリブレーションする |
+| 磁石や金属の近くで使用する場合                        | 磁場が影響するため頻繁に実施する |
+
+キャリブレーションで取得した補正値を実際の計測時に読み込み、計測していくことで算出精度が向上する。
+
+```sh
+# 使用したいフォントをインストールする
+sudo apt install fonts-noto-cjk
+# または
+sudo apt install fonts-ipafont-gothic
+```
+
+#### 8-2-1. ハードアイアン補正
+
+作成中
+
+#### 8-2-2. ソフトアイアン補正
+
+作成中
+
+#### 8-2-3. 補正例
+
+以下に補正例を示す。
+
+補正データを2次元および3次元でプロットした結果となっている。
+補正前データが取得したデータで、ハードアイアン補正をした後、ソフトアイアン補正を実施する。
+
+<img src="fig/magnetometer_2d.svg" width= "700px" >
+
+<img src="fig/magnetometer_3d.svg" width= "700px" >
 
 ## 9. IVK172 G-Mouse USB GPSを用いた計測データの取得について
 
@@ -1036,9 +1109,6 @@ GPS受信機には起動直後衛星起動データ存在しない。
 `--map_animation`オプションを設定することでMAPデータにアニメーションを追加することも可能である。
 
 <img src="fig/Map_data_with_animation.gif?raw=true" width= "600px" >
-
-
-
 
 また、高度情報があればkmlファイルを生成することができる。
 これは、[付録](#付録)の[GoogleEarth Proでの可視化](#GoogleEarth-Proでの可視化)に示すように、GoogleEarth Proに出力kmlファイルを読み込むことでペイロードの進んだ経路を表示することができる。
@@ -1291,9 +1361,9 @@ Added user アカウント名.
 
 ### IPアドレスの固定
 
-Raspberry Pi OSがBullseyeおよびRaspberry Pi Zero 2 Wの前提で説明を記載。
+Raspberry Pi OSがBullseyeおよびBookwarmで説明を記載。
 
-現在のIPアドレスは以下コマンドで調べられる。
+まず、現在のIPアドレスは以下コマンドで調べられる。
 
 ```sh
 $ ifconfig
@@ -1316,6 +1386,8 @@ wlan0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX packets 95607  bytes 53115827 (50.6 MiB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
+
+#### BullseyeでのIPアドレス固定
 
 wlan0がWi-Fiで接続しているインタフェース名でinetがIPv4アドレスとなっている。
 ネットマスクは255.255.255.0で24ビットがネットワーク部となっている。
@@ -1360,6 +1432,79 @@ default via 192.168.0.1 dev wlan0 src 192.168.0.67 metric 302
 ```
 
 default via 192.168.0.1がルーターのIPアドレスとなる。
+
+#### BookwarmでのIPアドレス固定
+
+BookwarmではRaspberry Pi OS設定時などにWi-Fiに接続済みという前提で説明を記載する。
+
+接続済みの前提でまず、SSIDを確認する。
+
+```sh
+$ wpa_cli status
+Selected interface 'wlan0'
+bssid=xx:xx:xx:xx:xx:xx
+freq=5240
+ssid=TP-Link_HOGE
+id=0
+mode=station
+wifi_generation=5
+pairwise_cipher=CCMP
+group_cipher=CCMP
+key_mgmt=WPA2-PSK
+wpa_state=COMPLETED
+ip_address=192.168.0.55
+p2p_device_address=xx:xx:xx:xx:xx:xx
+address=xx:xx:xx:xx:xx:xx
+uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ieee80211ac=1
+```
+
+`ssid=TP-Link_HOGE`がSSIDとなる。
+
+次にIPアドレス固定のため以下ファイルを編集する。
+`ipv4`の箇所へ固定する設定を追記する。
+
+```sh
+$ sudo vi /etc/NetworkManager/system-connections/SSID名.nmconnection # SSID名はTP-Link_HOGE.nmconnection
+[connection]
+id=SSID名
+uuid=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+type=wifi
+interface-name=wlan0
+
+[wifi]
+mode=infrastructure
+ssid=SSID名
+
+[wifi-security]
+auth-alg=open
+key-mgmt=wpa-psk
+psk=Wi-Fiのパスワード
+
+# ここへ設定するIPアドレスを記述する。
+[ipv4]
+method=auto
+address1=192.168.0.55/24,192.168.0.1
+dns=8.8.8.8;
+method=manual
+
+[ipv6]
+addr-gen-mode=default
+method=auto
+
+[proxy]
+```
+
+### Raspberry Piのピン配置確認コマンド
+
+以下コマンドでRaspberry Piのピン配置を確認できる。
+
+```sh
+$ pinout
+```
+
+<img src="fig/pin_configuration.svg" width= "300px" >
+
 
 ### I2C通信
 
@@ -1407,7 +1552,6 @@ ICM-20948の端子説明を以下に示す。
 | **ACL** | Auxiliary Clock / AUX\_CL | 磁気センサとのI2C通信(内部用)。通常外部配線は不要。               |
 | **ADA** | Auxiliary Data / AUX\_DA  | 同上。磁気センサとのデータ通信ライン(内部用)。                   |
 
-
 BME280の端子説明を以下に示す。
 
 | ピン名        | 機能                      | 説明                                                                 |
@@ -1432,47 +1576,332 @@ MPU6050の端子説明を以下に示す。
 | **AD0** | アドレス選択          | I2Cでは、**接地(GND)するとアドレス0x68**、**VCCにするとアドレス0x69** になる。|
 | **INT** | 割り込み出力          | モーションイベントなどの割り込み信号。GPIOピンに接続して使用可能。
 
+### I2C通信における性能比較
+
+Raspberry Pi OSがBullseyeおよびBookwarmで説明を記載。
+
+#### BullseyeでのI2C通信クロック確認
+
+BullseyeでのI2C通信クロックは以下ファイルに記載してある内容で確認できる。
+
+```sh
+sudo cat /boot/config.txt | grep i2c_arm_baudrate
+dtparam=i2c_arm_baudrate=400000
+```
+
+結果が表示されない場合、デフォルト値の100kHz(=100000)で設定してある。
+
+#### BookwarmでのI2C通信クロック確認
+
+```sh
+sudo cat /boot/firmware/config.txt | grep i2c_arm_baudrate
+dtparam=i2c_arm_baudrate=400000
+```
+
+結果が表示されない場合、デフォルト値の100kHz(=100000)で設定してある。
+
+#### I2C通信クロックの変更
+
+`/boot/config.txt`または`/boot/firmware/config.txt`にI2Cクロックの設定を追記することでクロック周波数を変更することが可能である。
+```sh
+sudo vi /boot/firmware/config.txt
+# For more options and information see
+# http://rptl.io/configtxt
+# Some settings may impact device functionality. See link above for details
+
+# Uncomment some or all of these to enable the optional hardware interfaces
+dtparam=i2c_arm=on
+#dtparam=i2s=on
+#dtparam=spi=on
+dtparam=i2c_arm_baudrate=400000
+
+            省略
+```
+
+`dtparam=i2c_arm_baudrate=400000`と追記した場合、`400KHz`に変更できる。
+変更後、再起動することで設定を反映できる。
+
+```sh
+$ sudo reboot
+```
+
+#### I2C通信クロック別実行時間計測
+
+今回、MPU6050およびBME280を用いて、クロック周波数別で比較を行う。
+
+比較は100回I2C通信バスからデータ取得を実施した際の実行時間を計測する。
+`read_byte_data`関数と`read_i2c_block_data`関数とで異なる関数を用いて計測するのは、1byteのデータ取得かI2C通信バス32byte以内で指定し、データを取得する方法で通信頻度が異なる。
+
+以下に前提条件を記載する。
+- 確認するI2C通信バスクロック
+  - 100KHz
+  - 400Khz
+- MPU6050
+  - [6-2. Pythonコードの説明](#6-2-Pythonコードの説明)に示すように関数別でも比較する。
+    - `read_byte_data`関数を使用する場合
+    - `read_i2c_block_data`関数を使用する場合
+- BM280
+  - 100KHzと400KHzで比較する。
+  - 温度、湿度、気圧算出まで行い比較する。
+
+比較結果表は以下となる。
+
+| センサ名 | 関数 |  100KHz | 400KHz | 
+|--|--|--|--|
+| MPU6050 | `read_byte_data`関数      | 0.5223sec | 0.1544sec  |
+|         | `read_i2c_block_data`関数 | 0.1775sec | 0.0454sec  |
+| BME280  | `read_i2c_block_data`関数<br>※一部`read_byte_data`関数 | 1.8098sec | 1.6865sec |
+
+まず、MPU6050の比較結果から読み取れる内容としては以下がある。
+- 1回あたりのI2Cバス通信でのデータ取得平均時間(100で割る)
+  - `read_byte_data`関数の場合
+    - 100KHzは5.2msec(0.005223sec)
+    - 400KHzは1.5msec(0.001544sec)
+  - `read_i2c_block_data`関数の場合
+    - 100KHzは1.7msec(0.001775sec)
+    - 400KHzは0.4msec(0.000454sec)
+これら結果から、`read_i2c_block_data`関数の方がI2C通信バス負荷を少なく、実行時間を短く処理できる。
+また、ChatGPT調べ結果では、`read_byte_data`関数で取得すると、CPUをI/O処理で使用する頻度が上がり、数mWの増加が通信中に発生する見積りとなる。
+よって、`read_i2c_block_data`関数で制御が推奨となる。
+
+次に、BME280の比較結果について以下が読み取れる。
+- 1回あたりのI2Cバス通信でのデータ取得平均時間(100で割る)
+  - 100KHzは1.8msec(0.0018098sec)
+  - 400KHzは1.6msec(0.0016865sec)
+
+これらの結果から、400KHzの方が高速にデータを取得できる。
+
+BME280については、今回Pythonのライブラリを用いて温度・湿度・気圧を取得している。
+MPU6050とBME280と比較すると、BME280の方が取得データ容量が少ないが、実行時間が**100KHzで3.6倍**、**400KHzで10倍**も増加している。
+これは、センサー生データ取得後にCPUを用いた補正計算量の差にあると思われる。
+MPU6050は生データの補正計算量が[6-2. Pythonコードの説明](#6-2-Pythonコードの説明)にあるように除算が1回および温度の補正に加算が2回程度である。
+
+一方、BME280はライブラリ内部の演算処理で多くの除算・乗算・加算が行われる。
+また、I2C通信バスを`read_i2c_block_data`関数および`read_byte_data`関数の両方で使用し複数回アクセスしている。
+なお、ライブラリを使わずセンサー生データを取得しユーザー記述で補正計算し取得も可能である。
+しかし、補正計算をする場合CPUを用いて処理をすることからユーザー記述により消費電力・実行時間が増加するため注意が必要である。
+センサー生データで問題ないデータの場合は後ほど補正計算するようにした方が良い場合があるため、使用用途を検討した上で補正計算の実施は検討した方が良い。
+
+例1)MPU6050で姿勢制御をしたい場合、リアルタイムで補正計算しないとデータが使用できない。
+
+例2)BME280で気圧から高度を取得し、高度を後日確認し状況把握したい場合は生データでも問題ない。
+
+以下に参考として補正計算をRaspberry Pi 4上で実施した際の計測結果を示す。
+
+| センサ名  | 補正計算| 100KHz | 400KHz | 
+|--|--|--|--|
+| BME280  | 有り | 1.8098sec | 1.6865sec |
+|         | 無し | 0.5979sec | 0.1704sec |
+
+このように、補正計算を実施するかどうかで3倍または10倍の差が発生する。
+
+さらに、I2C通信クロック周波数についても、I2Cバス上に接続するデバイスおよびデバイス使用用途によって変更した方が良い。
+これは、周波数が高いほど消費電力が高い一方、バス通信占有時間に伴う消費電力増加がトレードオフの関係となる。
+ChatGPT調べでは、100KHzと400KHzで大きな差はないが、複数デバイス接続・0.033secで複数回取得をしたい用途であれば、400KHzが推奨とされている。
+
+#### I2C通信バスの制約
+
+今回のPythonスクリプトではセンサー取得はマルチスレッドで非同期・排他制御無しで実施している。
+しかし、I2C通信バスにおいて、複数デバイスからデータを同時に取得するリクエストを出すと以下問題がある。
+- データの欠落
+- 通信エラー
+- バスロック・ハングアップ
+
+上記から、排他制御を実施してリクエストを同時に発生しないように実装が必要となる。
+
+### I2C通信バスのGPIOピン割り当て
+
+I2C通信バスをGPIOピンに追加で割り当てられる。
+
+`/boot/firmware/config.txt`を以下のように追加し、再起動すると割り当てられる。
+
+```sh
+sudo vi /boot/firmware/config.txt
+# For more options and information see
+# http://rptl.io/configtxt
+# Some settings may impact device functionality. See link above for details
+
+# Uncomment some or all of these to enable the optional hardware interfaces
+dtparam=i2c_arm=on
+#dtparam=i2s=on
+#dtparam=spi=on
+
+dtoverlay=i2c3,pins_4_5 # 追加 SDA=GPIO4/SCL=GPIO5
+dtoverlay=i2c4,pins_6_7 # 追加 SDA=GPIO6/SCL=GPIO7
+
+            省略
+```
+
+`dtoverlay=i2c3,pins_4_5`この場合、SDAをGPIO4、SCLをGPIO5へ割り当てる。
+
+`dtoverlay=i2c3,pins_6_7`この場合、SDAをGPIO6、SCLをGPIO7へ割り当てる。
+
+再起動することで上記設定を反映できる。
+
+```sh
+$ sudo reboot
+```
+
+以下コマンドでI2Cデバイスアドレスを確認できる。
+
+I2C通信バス1にICM-20948を接続しアドレス0x68が確認できる。
+
+```sh
+$ i2cdetect -y 1
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:                         -- -- -- -- -- -- -- -- 
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+60: -- -- -- -- -- -- -- -- -- 68 -- -- -- -- -- -- 
+70: -- -- -- -- -- -- -- --  
+```
+
+I2C通信バス1にMPU6050を接続しアドレス0x68が確認できる。
+
+```sh
+$ i2cdetect -y 3
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:                         -- -- -- -- -- -- -- -- 
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+60: -- -- -- -- -- -- -- -- 68 -- -- -- -- -- -- -- 
+70: -- -- -- -- -- -- -- --   
+```
+
+I2C通信バス1にBM280を接続しアドレス0x76が確認できる。
+
+```sh
+$ i2cdetect -y 4
+     0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+00:                         -- -- -- -- -- -- -- -- 
+10: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+20: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+30: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+40: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+50: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- 
+70: -- -- -- -- -- -- 76 -- 
+```
+
+[I2C通信バスの制約](#I2C通信バスの制約)に示すように同時にI2C通信バスを使う場合、センサー毎で逐次的に取得しなければならない。
+一方、I2C通信バスを増やすことで競合することがないため並列で取得が可能となる。
+実行時間の制約がアプリケーションにある場合、並列に実行できるようにした方が良い。
+
+PythonのコードでI2C通信バスを選択する場合以下のように記述する。
+```py
+import smbus2
+bus = smbus2.SMBus(3)
+bus = smbus2.SMBus(4)
+```
+
+ICM-20948でI2C通信バスを1以外でqwiic_icm20948を使用する場合はライブラリを書き換えないとできない。
+方法が判明した後追記する。
+
+
+なお、I2C通信バスが異なれば、デバイスアドレスが重複しても問題無い。
+よって、MPU6050とICM-20948でデバイスアドレス0x68が重複しても問題無く、同じデバイスを複数接続することも可能である。
+
+### TeraTermで公開鍵認証で接続する方法
+
+Windowsからssh接続し制御したい場合TeraTermを用いて接続できる。
+接続時にパスワード認証が必要となるが、公開鍵認証でパスワード認証せずに接続できる。
+
+まず、Raspberry Piにssh接続をして公開鍵を生成する。
+
+```sh
+$ ssh-keygen -t rsa
+Generating public/private rsa key pair.
+Enter file in which to save the key (/home/ユーザ名/.ssh/id_rsa): Enterを押す
+Enter passphrase (empty for no passphrase): Enterを押す
+Enter same passphrase again: Enterを押す
+Your identification has been saved in /home/ユーザ名/.ssh/id_rsa
+Your public key has been saved in /home/ユーザ名/.ssh/id_rsa.pub
+The key fingerprint is:
+SHA256:TFjj5HtSq/yWaP2aqPG4iUqAPzWlQV0QTM8F4ZgXfmk ユーザ名@raspberrypi
+The key's randomart image is:
++---[RSA 3072]----+
+|    .+++Oo.      |
+|   .  o& + .     |
+|    . = X E      |
+|.    + + = .     |
+|o   +   S o      |
+| o . . . +       |
+|  +   . oo .     |
+| . . . =oo+.     |
+|  ... =+o.+o.    |
++----[SHA256]-----+
+```
+
+id_rsa.pubが公開鍵、id_rasが秘密鍵となる。
+
+```sh
+$ ls ~/.ssh
+id_rsa  id_rsa.pub
+```
+Authorized Keysへ公開鍵を登録する。
+
+```sh
+$ cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+```
+
+WinSCPなどでWindows上に秘密鍵id_rsaを転送し、任意のフォルダに配置する。
+
+TeraTermの新しい接続画面で「ホスト(T)」の欄へ公開鍵認証をできるよう記載する。
+
+```text
+RaspberryPiのIPアドレス /auth=publickey /user=ユーザー名 /keyfile=任意のフォルダパス\id_ras
+
+例)192.168.0.55 /auth=publickey /user=iamuser_name /keyfile=C:\User\iamuser_windws_name\id_ras
+```
 
 ### Raspberry Pi OSの準備
 
-作成中
+Raspberry Pi OSのインストール構成を設定していく。
+Raspberry Pi Imagerは[参考情報](#参考情報)にリンクを記載してある。
 
-### I2C通信およびSSH接続の有効化
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part1.svg" width= "500px" >
 
-```sh
-$ sudo raspi-config
-```
-`3 Interface Options    Configure connections to peripherals`を選択する。
+まず、デバイスからどのRaspberry piにするか決定する。
 
-<img src="fig/raspi-config_1.svg" width= "650px" >
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part2.svg" width= "500px" >
 
-まず、SSHを有効にするため、`I2 SSH           Enable/disable remote command line access using SSH`を選択する。
+OSを選択する。OSには「Legacy, 32-bit:Bullseye」および「32bit:Bookwarm」がある。
 
-<img src="fig/raspi-config_2.svg" width= "650px" >
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part3.svg" width= "500px" >
 
-はいを選択しEnter。
+インストール先SDカードを選択する。間違えたインストール先を選択するとデータが消えるため要注意。
 
-<img src="fig/raspi-config_3.svg" width= "650px" >
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part4.svg" width= "500px" >
 
-了解でEnter。
+構成設定が完了したら「次へ」ボタンを押し、インストールを開始する。
 
-<img src="fig/raspi-config_4.svg" width= "650px" >
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part5.svg" width= "500px" >
 
-次にI2Cを有効にするため、`I5 I2C           Enable/disable automatic loading of I2C kernel module`を選択する。
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part6.svg" width= "500px" >
 
-はいを選択しEnter。
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part7.svg" width= "500px" >
 
-<img src="fig/raspi-config_5.svg" width= "650px" >
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part8.svg" width= "500px" >
 
-了解でEnter。
+完了したらSDカードを取り出し、Raspberry piへ差し込む。
 
-<img src="fig/raspi-config_6.svg" width= "650px" >
+<img src="fig/Raspberry_Pi_OS_Installation_Guide_Part9.svg" width= "500px" >
 
-最初の画面に戻りFinishを選択いEnter。
-その後、再起動する。
+Raspberry Piに電力供給すればSDカードから起動できる。
+
+起動後は、Bluetoothの設定、Raspbianユーザーの作成、Wi-Fiの設定およびソフトウェアアップデートの確認をした後、デスクトップ画面へ遷移する。
+
+
 
 
 ### カメラモジュールの比較
+
 |仕様|Camera Module V2|Raspberry Pi HQ Camera|Camera Module V3|
 |--|--|--|--|
 |搭載センサー|Sony IMX219|Sony IMX477|Sony IMX708|
@@ -1487,8 +1916,6 @@ $ sudo raspi-config
 |GPIOピン|なし|3ピン端子(GND,3.3V,CAM_GPIO)|なし|
 |I2C接続/リボン|15ピンCSIリボン|15ピンCSIリボンI2C制御あり|15ピンCSIリボン|
 |推奨用途|一般撮影、教育、軽量システム|高画質静止画、望遠、産業検査|オートフォーカスが必要な動画・写真撮影|
-
-
 
 ### Raspberry Piのスペック表
 
@@ -1640,6 +2067,266 @@ kmlファイルを読み込むことでGoogleEarth Proで可視化すること�
 
 作成中(映像を取得した時の実際に動かしてみたときの結果を記載予定)
 
+### 他PCを用いたデータ解析例
+
+Raspberry Pi 4やZero 2 Wを使って取得動画を解析すると1分程度の動画ファイルだけで5~10分程度の時間がかかってくる。
+より性能の高いPCで解析できるよう今回はVirtual Box上の仮想マシンでUbuntuを起動して解析を実施する。
+
+なお、GPUを用いた解析を行う場合はVirtual Box上の仮想マシンでなく、物理マシンに直接Ubuntuなどをインストールして環境構築をすることを推奨する。(Virtual Box上でも設定可能な場合があるが設定が困難な様子)
+
+#### 他PCを用いた環境概要
+
+|項目| OS | CPU | メモリ|
+|--|--|--|--|
+|物理マシン| Windows 11 Home | Intel(R) Core(TM) i9-10900 CPU @ 2.80GHz<br>10コア | 64GB |
+|仮想マシン| Ubuntu 22.04.2 LTS | 4コア | 40GB | 
+|物理マシン| Raspbian  | Broadcom BCM2711,1.5GHz クアッドコア ARM Cortex-A72<br>4コア | 4GB |
+
+#### 他PCを用いた実行時間比較
+
+1時間以上の動画では比較していないが、1、2分程度で差を確認する。
+
+| 動画時間 | PC | 動画からフレームに<br>分割する時間 | フレームにセンサーデータを<br>埋め込む時間 | 埋め込みフレームデータを<br>動画に変換する時間 |
+|--|--|--|--|--|
+| 約1分| Ubutu 22.04 PC<br>(仮想マシン) | 7秒 | 20秒 | 43秒 |
+|| Raspberry Pi 4<br>(マイコン) | 約1分 | 約6分 | 約5分 |
+| 約2分| Ubutu 22.04 PC<br>(仮想マシン) | 14秒 | 48秒 | 約1分 |
+|| Raspberry Pi 4<br>(マイコン) | 約3分 | 約11分 | 約8分 |
+
+上記結果から4時間の動画を変換する場合、Raspberry Pi 4だと2、3日程度かかる想定となる。
+
+#### Ubuntu 22.04.2 LTSでの解析環境準備
+
+#### VirtualBoxでの仮想マシン作成およびUbuntuの起動
+
+仮想マシンを作成し、OS(Ubuntu)をインストールする手順を説明する。
+
+まず、仮想マシンを新規で作成する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part1.svg" width= "600px" >
+
+OS選択画面で赤枠を埋める。
+名前および保存先フォルダは任意で、ISOイメージはUbuntuのページから事前にダウンロードしてから選択する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part2.svg" width= "600px" >
+
+割り当てメモリとCPUを選択する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part3.svg" width= "600px" >
+
+初期ユーザーを作成する。
+画像では一般ユーザーでvboxuser、パスワードにchagemeを設定している。
+このパスワードrootユーザーのパスワードとなる。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part4.svg" width= "600px" >
+
+ディスク容量を割り当てる。
+(※後で変更は可能であるが、変更時にUbuntuのディスクチェックが動き、長時間起動できなくなることがあるため、初回で余裕のある容量にしておいた方が良い。)
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part5.svg" width= "600px" >
+
+構成最終チェックをして問題なければUbuntuのインストールが開始する。
+
+<img src="fig/Steps_to_Create_a_Virtual_Machine_Part6.svg" width= "600px" >
+
+#### Ubuntuでターミナルが起動しないときの設定
+
+Ubuntuで作業する際にターミナルが起動しないことがある。以下設定をする事で解決することがあるため発生した際は確認する。
+
+Ctrl+Alt+F3を押しCLIを起動する。
+以下画面が出たらCLIで起動できている。
+
+<img src="fig/Troubleshooting_Terminal_Startup_Issues_Part1.svg" width= "600px" >
+
+ubuntuインストール時に設定したユーザー(ここではvboxuser)でログインする。
+パスワードも設定したパスワードとなる。
+ログイン後に、以下コマンドでrootユーザーに切り替える。
+パスワードはUbuntuインストール時に設定したパスワードとなる。
+
+<img src="fig/Troubleshooting_Terminal_Startup_Issues_Part2.svg" width= "600px" >
+
+rootユーザに変更後、エディタで`/etc/default/locale`を開き以下の箇所を確認し変更をする。
+
+```sh
+$ cat /etc/default/locale
+#  File generated by update-locale
+LANG="en_US"
+LANGUAGE="en_US:"
+LC_NUMERIC="ja_JP.UTF-8"
+LC_TIME="ja_JP.UTF-8"
+LC_MONETARY="ja_JP.UTF-8"
+LC_PAPER="ja_JP.UTF-8"
+LC_NAME="ja_JP.UTF-8"
+LC_ADDRESS="ja_JP.UTF-8"
+LC_TELEPHONE="ja_JP.UTF-8"
+LC_MEASUREMENT="ja_JP.UTF-8"
+LC_IDENTIFICATION="ja_JP.UTF-8"
+```
+
+```sh
+$ vi /etc/default/locale
+#  File generated by update-locale
+LANG="en_US.UTF-8" #ここを変更
+LANGUAGE="en_US:"
+LC_NUMERIC="ja_JP.UTF-8"
+LC_TIME="ja_JP.UTF-8"
+LC_MONETARY="ja_JP.UTF-8"
+LC_PAPER="ja_JP.UTF-8"
+LC_NAME="ja_JP.UTF-8"
+LC_ADDRESS="ja_JP.UTF-8"
+LC_TELEPHONE="ja_JP.UTF-8"
+LC_MEASUREMENT="ja_JP.UTF-8"
+LC_IDENTIFICATION="ja_JP.UTF-8"
+```
+
+変更後、`reboot`コマンドで再起動する。
+
+#### Ubuntuでユーザを追加しroot権限を付与する方法
+
+ユーザーの追加は以下コマンドで可能。
+
+```sh
+$ sudo adduser ユーザー名
+```
+
+ユーザーの削除は以下コマンドで可能。
+
+```sh
+$ sudo userdel -r ユーザー名
+```
+
+root権限の付与は以下コマンドで可能。
+
+```sh
+$ sudo gpasswd -a ユーザー名 sudo
+```
+
+#### WindowsからUbuntuにTeraTermでSSH接続する設定
+
+WindowsからTeraTermで接続したいときは以下設定をする。
+まず、VirtualBoxのメニューで設定したい仮想マシンを右クリックし「設定(S)...」をクリックする。
+設定メニューを開いたら、「システム」を選択。
+
+マザーボードタブの起動順序(B)でネットワークにチェックを入れる。
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part1.svg" width= "500px" >
+
+ネットワークメニューを選択し、ポートフォワーディングボンタンを押す。
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part2.svg" width= "500px" >
+
+ポートフォワーディング ルールでホストポート、ゲストポートをそれぞれ編集する。
+ホストポートはTeraTermで接続する際に使用し、ゲストポートはUbuntuでSSHサーバーを設定しているポートとなる。
+22はデフォルトのポートであるため、Ubuntu側で変更している場合は、その変更した番号を入れる。
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part3.svg" width= "500px" >
+
+TeraTermを起動し、ホスト(T)に`127.0.0.1:3000`と入力し接続する。
+
+<img src="fig/How_to_Set_Up_SSH_Access_from_Windows_to_Ubuntu_with_Tera_Term_Part4.svg" width= "500px" >
+
+#### Ubuntuのスクリーンセイバー設定
+
+まず、Settingsを開く。
+Privacyを選択し、次にScreenを選択する。
+
+Blank Screen DelayからNeverを選択することでスクリーンサイバーが起動しないようにできる。
+
+<img src="fig/How_to_Configure_the_Screensaver.svg" width= "500px" >
+
+#### Ubuntuのキーボード設定
+
+まず、Settingsを開く。
+Keyboardメニューを選択し、Input Sourcesからキーボード配列を選択できる。
+不要なキーボード設定は追加後にRemoveで消した方が良い。
+
+<img src="fig/How_to_Configure_the_Keyboard.svg" width= "500px" >
+
+#### Ubuntuのディスプレイ設定
+
+まず、Settingsを開く。
+Displaysメニューを選択し、Resolutionから設定したいディスプレイサイズを選択できる。
+
+<img src="fig/How_to_Configure_the_Display.svg" width= "500px" >
+
+#### Windows VirtualBox上でWindowsからUbuntuにコピー&ペーストする設定
+
+WindowsだコピーしたテキストをUbuntuに貼り付けたい場合、以下設定が必要である。
+
+まず、VirtualBoxのメニューからデバイスをクリックする。
+クリックすると、「クリップボードの共有」メニューが出る。
+そこから「双方向」を選択する。
+次に再度デバイスをクリックし、「Guest Additions CDイメージの挿入...」をクリックする。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part1.svg" width= "500px" >
+
+Ubuntuの左メニューバーにディスクアイコンが出るためクリックする。
+「VBoxLinuxAdditions.run」を右クリックしPropertiesをクリックする。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part2.svg" width= "500px" >
+
+Parent folderの欄に記載のパスをコピーしておく。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part3.svg" width= "500px" >
+
+ターミナルを開き、rootユーザーに切り替える。
+切り替え後、cdコマンドで先ほどコピーしたパスへ移動する。
+移動後、VBoxLinuxAdditions.runを実行する。
+実行が終了すれば、コピー&ペーストが可能となる。
+
+<img src="fig/How_to_Set_Up_Copy_and_Paste_Part4.svg" width= "500px" >
+
+#### Raspbian と合わせたPythonライブラリのインストール
+
+[Python実行環境準備](#Python実行環境準備)に記載した内容はPython仮想環境も構築を含めUbuntu 22.04.2 LTS上で実施してある前提として追加で必要なパッケージ以下に記載する。
+
+なお、`libopenjpeg-dev`およびGPIOやUSBからデータを取得するためのPythonライブラリはUbuntu 22.04.2 LTSでは使わないためインストール不要である。
+
+[Python実行環境準備](#Python実行環境準備)に記載した`apt-get`でインストール可能なパッケージはインストールしてから以下を実行する。
+
+```sh
+$ sudo apt-get install -y build-essential
+$ sudo apt-get install -y libffi-dev
+$ sudo apt-get install -y libssl-dev
+$ sudo apt-get install -y zlib1g-dev
+$ sudo apt-get install -y liblzma-dev
+$ sudo apt-get install -y libbz2-dev
+$ sudo apt-get install -y libreadline-dev
+$ sudo apt-get install -y libsqlite3-dev
+$ sudo apt-get install -y libopencv-dev
+$ sudo apt-get install -y tk-dev
+$ sudo apt-get install -y git
+$ git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+# ダウンロードが開始(ログ省略)
+$ echo '' >> ~/.bashrc
+$ echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+$ echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+$ echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
+$ source ~/.bashrc
+$ pyenv install 3.9.2
+# インストールが開始(ログ省略)
+$ pyenv global 3.9.2
+```
+
+pythonのバージョンを確認し3.9.2になっていれば問題ない。
+Python仮想環境を3.9.2で構築する。
+
+
+#### MP4動画を確認するためのパッケージインストール
+
+UbuntuでMP4に変換した動画を再生するのに以下パッケージをインストールすることで可能である。
+
+```sh
+$ sudo apt-get install ubuntu-restricted-extras
+```
+OKにカーソルをあわせEnterキーを押す。
+
+<img src="fig/How_to_Install_ubuntu_restricted_extras_Part1.svg" width= "500px" >
+
+YesにカーソルをあわせEnterキーを押す。
+
+<img src="fig/How_to_Install_ubuntu_restricted_extras_Part2.svg" width= "500px" >
+
 ## 参考情報
 - Raspberry Pi OS
   - [Raspberry Pi OS](https://www.raspberrypi.com/software/)
@@ -1659,11 +2346,11 @@ kmlファイルを読み込むことでGoogleEarth Proで可視化すること�
   - [UGREEN Micro HDMI延長ケーブル Micro HDMI to HDMI変換アダプター](https://www.amazon.co.jp/dp/B08P5SDCVT?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1)
   - [絶縁耐熱テープ](https://www.amazon.co.jp/dp/B08GP32DS9?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1)
   - [BNO085 9 軸センサーモジュール](https://www.amazon.co.jp/dp/B0DK2XDQ4G?ref=ppx_yo2ov_dt_b_fed_asin_title)
-  - スイッチサイエンス
-    - [Arducam IMX477搭載 HQ camera(6 mm CSレンズ付き)](https://www.switch-science.com/products/6880?_pos=7&_sid=9ab8369fc&_ss=r)
-    - [Arducam IMX477搭載 HQ camera](https://www.switch-science.com/products/7051?srsltid=AfmBOoqLVns4HMxpaPJ_fpm7YE4BznPlN56gxoLPrypVU7RpUP7Fn-qB)
-  - その他
-    - [GoogleEarth](https://earth.google.com/)
-    - [GoogleEarth Pro](https://www.google.com/earth/about/versions/)
-    - [NATIONAL WEATHER SERVICE](https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/)
+- スイッチサイエンス
+  - [Arducam IMX477搭載 Raspberry Pi用電動式フォーカス HQ Camera](https://www.switch-science.com/products/6878?srsltid=AfmBOorNcQFrCMF4XFcC0mjWJ0WHqSZkA_kR5Jn2Xsk-jJXXz0kwXcwJ)
+- その他
+  - [GoogleEarth](https://earth.google.com/)
+  - [GoogleEarth Pro](https://www.google.com/earth/about/versions/)
+  - [GoogleEarth Pro Download for Ubuntu 22.04 LTS](https://www.google.com/earth/download/gep/agree.html)
+  - [NATIONAL WEATHER SERVICE](https://nomads.ncep.noaa.gov/pub/data/nccf/com/gfs/prod/)
     
