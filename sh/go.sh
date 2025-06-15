@@ -25,6 +25,7 @@ do
         mkdir /home/dsfsb/workarea/log/data_${FNAME}/pictures
         break
     fi
+    cd /home/dsfsb/workarea/log/data_${FNAME}
 done
 
 #start Temperature measurement
@@ -33,6 +34,7 @@ done
 #start Acceleration measurement
 /usr/bin/python /home/dsfsb/workarea/python/run_mpu9250.py > /home/dsfsb/workarea/log/data_${FNAME}/mpu9250.log &
 /usr/bin/python /home/dsfsb/workarea/python/run_mpu6050.py > /home/dsfsb/workarea/log/data_${FNAME}/mpu6050.log &
+/usr/bin/python /home/dsfsb/workarea/python/run_power_monitor.py > /home/dsfsb/workarea/log/data_${FNAME}/power_monitor.log &
 
 #start move
 sh /home/dsfsb/workarea/sh/get_move.sh data_${FNAME} > /home/dsfsb/workarea/log/data_${FNAME}/get_move.log &
