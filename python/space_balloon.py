@@ -43,68 +43,84 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 ########################################################################
 class SensorWrapper:
 
-    bme280_cond         = threading.Condition()
-    mpu6050_cond        = threading.Condition()
-    icm20948_cond       = threading.Condition()
-    camera_module_cond  = threading.Condition()
-    running             = True
-    bme280_ready        = False
-    mpu6050_ready       = False
-    icm20948_ready      = False
-    camera_module_ready = False
+    start_unix_epoch_time = 0.0
+    bme280_cond           = threading.Condition()
+    mpu6050_cond          = threading.Condition()
+    icm20948_cond         = threading.Condition()
+    camera_module_cond    = threading.Condition()
+    powermonitor_cond     = threading.Condition()
+    running               = threading.Event()
+    bme280_ready          = False
+    mpu6050_ready         = False
+    icm20948_ready        = False
+    camera_module_ready   = False
+    powermonitor_ready    = False
 
     def __init__( self , argv ):
         print("[Info] Create an instance of the SensorWrapper class.")
-        self.argv                 = argv
-        self.__bme280_bus         = None
-        self.__mpu6050_bus        = None
-        self.__camera_fa          = None
-        self.__bme280_fa          = None
-        self.__mpu6050_fa         = None
-        self.__icm20948_fa        = None
-        self.__gps_fa             = None
-        self.__mode               = None
-        self.__output_dir         = None
-        self.__icm20948_i2cbus    = None
-        self.__bme280_i2cbus      = None
-        self.__mpu6050_i2cbus     = None
-        self.__gps_en             = None
-        self.__bme280_en          = None
-        self.__mpu6050_en         = None
-        self.__icm20948_en        = None
-        self.__framerate          = None
-        self.__bitrate            = None
-        self.__width              = None
-        self.__height             = None
-        self.__gps_port           = None
-        self.__bme280_addr        = None
-        self.__mpu6050_addr       = None
-        self.__icm20948_addr      = None
-        self.__gps_csv            = None
-        self.__bme280_csv         = None
-        self.__mpu6050_csv        = None
-        self.__icm20948_csv       = None
-        self.__gps_interval       = None
-        self.__mp4_en             = None
-        self.__altitude_en        = None
-        self.__bme280_graph       = None
-        self.__mpu6050_graph      = None
-        self.__icm20948_graph     = None
-        self.__tolerance          = None
-        self.__tolerance_gps      = None
-        self.__excel_en           = None
-        self.__map_animation_en   = None
+        self.argv                    = argv
+        self.__bme280_bus            = None
+        self.__mpu6050_bus           = None
+        self.__camera_fa             = None
+        self.__bme280_fa             = None
+        self.__mpu6050_fa            = None
+        self.__icm20948_fa           = None
+        self.__powermonitor_fa       = None
+        self.__gps_fa                = None
+        self.__mode                  = None
+        self.__output_dir            = None
+        self.__icm20948_i2cbus       = None
+        self.__bme280_i2cbus         = None
+        self.__mpu6050_i2cbus        = None
+        self.__gps_en                = None
+        self.__powermonitor_en       = None
+        self.__bme280_en             = None
+        self.__mpu6050_en            = None
+        self.__icm20948_en           = None
+        self.__framerate             = None
+        self.__bitrate               = None
+        self.__width                 = None
+        self.__height                = None
+        self.__gps_port              = None
+        self.__bme280_addr           = None
+        self.__mpu6050_addr          = None
+        self.__icm20948_addr         = None
+        self.__gps_csv               = None
+        self.__bme280_csv            = None
+        self.__mpu6050_csv           = None
+        self.__icm20948_csv          = None
+        self.__gps_interval          = None
+        self.__mp4_en                = None
+        self.__altitude_en           = None
+        self.__bme280_graph          = None
+        self.__mpu6050_graph         = None
+        self.__icm20948_graph        = None
+        self.__tolerance             = None
+        self.__tolerance_gps         = None
+        self.__excel_en              = None
+        self.__map_animation_en      = None
        
     def __handler( self , signum , frame ):
-        self.__camera_fa  .close()
-        self.__bme280_fa  .close()
-        self.__mpu6050_fa .close()
-        self.__icm20948_fa.close()
-        self.__gps_fa     .close()
-        self.__bme280_bus .close()
-        self.__mpu6050_bus.close()
+        SensorWrapper.running.clear()
+        self.__camera_fa       .close()
+        self.__bme280_en       and self.__bme280_fa       .close()
+        self.__mpu6050_en      and self.__mpu6050_fa      .close()
+        self.__icm20948_en     and self.__icm20948_fa     .close()
+        self.__powermonitor_en and self.__powermonitor_fa .close()
+        self.__gps_en          and self.__gps_fa          .close()
+        self.__bme280_bus      .close()
+        self.__mpu6050_bus     .close()
+        SensorWrapper.camera_module_ready = True
+        SensorWrapper.bme280_ready        = True
+        SensorWrapper.mpu6050_ready       = True
+        SensorWrapper.icm20948_ready      = True
+        SensorWrapper.powermonitor_ready  = True
+        SensorWrapper.bme280_cond              .notify()
+        SensorWrapper.runningmpu6050_cond      .notify()
+        SensorWrapper.runningicm20948_cond     .notify()
+        SensorWrapper.runningcamera_module_cond.notify()
+        SensorWrapper.runningpowermonitor_cond .notify()
         shutil.rmtree( './tmp' , ignore_errors=True )
-        SensorWrapper.running = False
 
     def __garbage_colloction( self ):
         pass
@@ -125,80 +141,82 @@ class SensorWrapper:
         parser.add_argument( '--mode'       , '-m' , default=0     , required=True       , help="" )
         #############################################################################################
         # Sensor Acquisition Mode Options
-        parser.add_argument( '--output_dir' , '-o' , default="./"                        , help="" )       
-        parser.add_argument( '--gps'               , default=False , action='store_true' , help="" )
-        parser.add_argument( '--bme280'            , default=False , action='store_true' , help="" )
-        parser.add_argument( '--mpu6050'           , default=False , action='store_true' , help="" )
-        parser.add_argument( '--icm20948'          , default=False , action='store_true' , help="" ) 
-        parser.add_argument( '--icm20948_i2cbus'   , default=1                           , help="" )
-        parser.add_argument( '--bme280_i2cbus'     , default=1                           , help="" )
-        parser.add_argument( '--mpu6050_i2cbus'    , default=1                           , help="" )
-        parser.add_argument( '--framerate'         , default="30"                        , help="" )
-        parser.add_argument( '--bitrate'           , default="8000000"                   , help="" )
-        parser.add_argument( '--width'             , default="1920"                      , help="" )
-        parser.add_argument( '--height'            , default="1080"                      , help="" )       
-        parser.add_argument( '--gps_port'          , default="/dev/ttyACM0"              , help="" )
-        parser.add_argument( '--gps_interval'      , default="1.0"                       , help="" )
-        parser.add_argument( '--bme280_addr'       , default="0x76"                      , help="" )
-        parser.add_argument( '--mpu6050_addr'      , default="0x68"                      , help="" )
-        parser.add_argument( '--icm20948_addr'     , default="0x68"                      , help="" )
+        parser.add_argument( '--output_dir'     , '-o' , default="./"                        , help="" )       
+        parser.add_argument( '--gps'                   , default=False , action='store_true' , help="" )
+        parser.add_argument( '--bme280'                , default=False , action='store_true' , help="" )
+        parser.add_argument( '--mpu6050'               , default=False , action='store_true' , help="" )
+        parser.add_argument( '--icm20948'              , default=False , action='store_true' , help="" )
+        parser.add_argument( '--powermonitor'          , default=False , action='store_true' , help="" ) 
+        parser.add_argument( '--icm20948_i2cbus'       , default=1                           , help="" )
+        parser.add_argument( '--bme280_i2cbus'         , default=1                           , help="" )
+        parser.add_argument( '--mpu6050_i2cbus'        , default=1                           , help="" )
+        parser.add_argument( '--framerate'             , default="30"                        , help="" )
+        parser.add_argument( '--bitrate'               , default="8000000"                   , help="" )
+        parser.add_argument( '--width'                 , default="1920"                      , help="" )
+        parser.add_argument( '--height'                , default="1080"                      , help="" )       
+        parser.add_argument( '--gps_port'              , default="/dev/ttyACM0"              , help="" )
+        parser.add_argument( '--gps_interval'          , default="1.0"                       , help="" )
+        parser.add_argument( '--bme280_addr'           , default="0x76"                      , help="" )
+        parser.add_argument( '--mpu6050_addr'          , default="0x68"                      , help="" )
+        parser.add_argument( '--icm20948_addr'         , default="0x68"                      , help="" )
         #############################################################################################
         # Sensor Data Analysis Mode Options
-        parser.add_argument( '--frame_sync'        , default=False , action='store_true' , help="" )
-        parser.add_argument( '--movie_csv'                                               , help="" )
-        parser.add_argument( '--gps_csv'                                                 , help="" )
-        parser.add_argument( '--bme280_csv'                                              , help="" )
-        parser.add_argument( '--mpu6050_csv'                                             , help="" )
-        parser.add_argument( '--icm20948_csv'                                            , help="" )
-        parser.add_argument( '--mp4'               , default=False , action='store_true' , help="" )
-        parser.add_argument( '--altitude'          , default=False , action='store_true' , help="" )
-        parser.add_argument( '--bme280_graph'      , default=False , action='store_true' , help="" )
-        parser.add_argument( '--mpu6050_graph'     , default=False , action='store_true' , help="" )
-        parser.add_argument( '--icm20948_graph'    , default=False , action='store_true' , help="" )
-        parser.add_argument( '--movie'                                                   , help="" )
-        parser.add_argument( '--tolerance'         , default=0.032                       , help="" )
-        parser.add_argument( '--tolerance_gps'     , default=1                           , help="" )
-        parser.add_argument( '--excel'             , default=False , action='store_true' , help="" )
-        parser.add_argument( '--map_animation'     , default=False , action='store_true' , help="" )
+        parser.add_argument( '--frame_sync'            , default=False , action='store_true' , help="" )
+        parser.add_argument( '--movie_csv'                                                   , help="" )
+        parser.add_argument( '--gps_csv'                                                     , help="" )
+        parser.add_argument( '--bme280_csv'                                                  , help="" )
+        parser.add_argument( '--mpu6050_csv'                                                 , help="" )
+        parser.add_argument( '--icm20948_csv'                                                , help="" )
+        parser.add_argument( '--mp4'                   , default=False , action='store_true' , help="" )
+        parser.add_argument( '--altitude'              , default=False , action='store_true' , help="" )
+        parser.add_argument( '--bme280_graph'          , default=False , action='store_true' , help="" )
+        parser.add_argument( '--mpu6050_graph'         , default=False , action='store_true' , help="" )
+        parser.add_argument( '--icm20948_graph'        , default=False , action='store_true' , help="" )
+        parser.add_argument( '--movie'                                                       , help="" )
+        parser.add_argument( '--tolerance'             , default=0.032                       , help="" )
+        parser.add_argument( '--tolerance_gps'         , default=1                           , help="" )
+        parser.add_argument( '--excel'                 , default=False , action='store_true' , help="" )
+        parser.add_argument( '--map_animation'         , default=False , action='store_true' , help="" )
         #############################################################################################
 
         try:
             ############################################################
-            args                     = parser.parse_args()
-            self.__mode              = int   ( args.mode               )
-            self.__output_dir        =         args.output_dir
-            self.__gps_en            = int   ( args.gps                )
-            self.__bme280_en         = int   ( args.bme280             )
-            self.__mpu6050_en        = int   ( args.mpu6050            )
-            self.__icm20948_en       = int   ( args.icm20948           )
-            self.__icm20948_i2cbus   = int   ( args.icm20948_i2cbus    )
-            self.__bme280_i2cbus     = int   ( args.bme280_i2cbus      )
-            self.__mpu6050_i2cbus    = int   ( args.mpu6050_i2cbus     )
-            self.__framerate         = int   ( args.framerate          )
-            self.__gps_interval      = float ( args.gps_interval       )
-            self.__bitrate           = int   ( args.bitrate            )
-            self.__width             = int   ( args.width              )
-            self.__height            = int   ( args.height             )
-            self.__gps_port          = args.gps_port
-            self.__bme280_addr       = int   ( args.bme280_addr   , 16 )
-            self.__mpu6050_addr      = int   ( args.mpu6050_addr  , 16 )
-            self.__icm20948_addr     = int   ( args.icm20948_addr , 16 )
-            self.__movie_csv         =         args.movie_csv
-            self.__gps_csv           =         args.gps_csv
-            self.__bme280_csv        =         args.bme280_csv
-            self.__mpu6050_csv       =         args.mpu6050_csv
-            self.__icm20948_csv      =         args.icm20948_csv
-            self.__frame_sync_en     = int   ( args.frame_sync         )
-            self.__mp4_en            = int   ( args.mp4                )
-            self.__altitude_en       = int   ( args.altitude           )
-            self.__bme280_graph_en   = int   ( args.bme280_graph       )
-            self.__mpu6050_graph_en  = int   ( args.mpu6050_graph      )
-            self.__icm20948_graph_en = int   ( args.icm20948_graph     )
-            self.__movieFile         =         args.movie
-            self.__tolerance         = float ( args.tolerance          )
-            self.__tolerance_gps     = float ( args.tolerance_gps      )
-            self.__excel_en          = int   ( args.excel              )
-            self.__map_animation_en  = int   ( args.map_animation      )
+            args                         = parser.parse_args()
+            self.__mode                  = int   ( args.mode                  )
+            self.__output_dir            =         args.output_dir
+            self.__gps_en                = int   ( args.gps                   )
+            self.__bme280_en             = int   ( args.bme280                )
+            self.__mpu6050_en            = int   ( args.mpu6050               )
+            self.__icm20948_en           = int   ( args.icm20948              )
+            self.__powermonitor_en       = int   ( args.powermonitor          )
+            self.__icm20948_i2cbus       = int   ( args.icm20948_i2cbus       )
+            self.__bme280_i2cbus         = int   ( args.bme280_i2cbus         )
+            self.__mpu6050_i2cbus        = int   ( args.mpu6050_i2cbus        )
+            self.__framerate             = int   ( args.framerate             )
+            self.__gps_interval          = float ( args.gps_interval          )
+            self.__bitrate               = int   ( args.bitrate               )
+            self.__width                 = int   ( args.width                 )
+            self.__height                = int   ( args.height                )
+            self.__gps_port              =         args.gps_port
+            self.__bme280_addr           = int   ( args.bme280_addr   , 16    )
+            self.__mpu6050_addr          = int   ( args.mpu6050_addr  , 16    )
+            self.__icm20948_addr         = int   ( args.icm20948_addr , 16    )
+            self.__movie_csv             =         args.movie_csv
+            self.__gps_csv               =         args.gps_csv
+            self.__bme280_csv            =         args.bme280_csv
+            self.__mpu6050_csv           =         args.mpu6050_csv
+            self.__icm20948_csv          =         args.icm20948_csv
+            self.__frame_sync_en         = int   ( args.frame_sync            )
+            self.__mp4_en                = int   ( args.mp4                   )
+            self.__altitude_en           = int   ( args.altitude              )
+            self.__bme280_graph_en       = int   ( args.bme280_graph          )
+            self.__mpu6050_graph_en      = int   ( args.mpu6050_graph         )
+            self.__icm20948_graph_en     = int   ( args.icm20948_graph        )
+            self.__movieFile             =         args.movie
+            self.__tolerance             = float ( args.tolerance             )
+            self.__tolerance_gps         = float ( args.tolerance_gps         )
+            self.__excel_en              = int   ( args.excel                 )
+            self.__map_animation_en      = int   ( args.map_animation         )
             ############################################################
         except Exception as e:
             print(e)
@@ -211,12 +229,13 @@ class SensorWrapper:
         output_timestamp_dir = self.__output_dir + "/" + timestamp
         os.makedirs( self.__output_dir    , exist_ok=True )
         os.makedirs( output_timestamp_dir , exist_ok=True )
-        bme280CsvFile       = output_timestamp_dir + "/bme280"   + ".csv"
-        mpu6050CsvFile      = output_timestamp_dir + "/mpu6050"  + ".csv"
-        icm20948CsvFile     = output_timestamp_dir + "/icm20948" + ".csv"
-        cameraCsvFile       = output_timestamp_dir + "/movie"    + ".csv"
-        gpsCsvFile          = output_timestamp_dir + "/gps"      + ".csv"
-        movieFileName       = output_timestamp_dir + "/movie"    + ".h264"
+        bme280CsvFile       = output_timestamp_dir + "/bme280"       + ".csv"
+        mpu6050CsvFile      = output_timestamp_dir + "/mpu6050"      + ".csv"
+        icm20948CsvFile     = output_timestamp_dir + "/icm20948"     + ".csv"
+        cameraCsvFile       = output_timestamp_dir + "/movie"        + ".csv"
+        gpsCsvFile          = output_timestamp_dir + "/gps"          + ".csv"
+        powermonitorCsvFile = output_timestamp_dir + "/powermonitor" + ".csv"
+        movieFileName       = output_timestamp_dir + "/movie"        + ".h264"
 
         if self.__bme280_i2cbus == self.__mpu6050_i2cbus:
             self.__bme280_bus   = smbus2.SMBus( self.__bme280_i2cbus  )
@@ -293,7 +312,7 @@ class SensorWrapper:
                     'mpu6050_byte_12' , 'mpu6050_byte_13'                
                 ]
             ]
-            self.__generate_empty_csvFile( mpu6050CsvFile ,data )
+            self.__generate_empty_csvFile( mpu6050CsvFile , data )
             self.__mpu6050_fa  = self.__get_csvFile( mpu6050CsvFile )
             self.__mpu6050Impl = MPU6050Impl( self.__mpu6050_bus , self.__mpu6050_addr , self.__mpu6050_fa )
         #########################################################################
@@ -313,6 +332,18 @@ class SensorWrapper:
             self.__gps_fa = self.__get_csvFile( gpsCsvFile )
             self.__gpsModuleImpl = GPSModuleImpl( self.__gps_port , self.__gps_fa , self.__gps_interval )
         #########################################################################
+        if self.__powermonitor_en :
+            print("[Info] Activate the PowerMonitor.")
+            data = [
+                [
+                    'power_monitor_elapsed_time' , 'power_monitor_start_epoch_time' , 'power_monitor_unix_epoch_time' ,
+                    'voltage' , 'throttled_status'
+                ]
+            ]
+            self.__generate_empty_csvFile( powermonitorCsvFile , data )
+            self.__powermonitor_fa = self.__get_csvFile( powermonitorCsvFile )
+            self.__powermonitorImpl = PowerMonitorImpl( self.__powermonitor_fa )
+        #########################################################################
                 
     def doSensorWrapper(self):
         print("[Info] Start the doSensorWrapper function.")
@@ -324,12 +355,13 @@ class SensorWrapper:
             self.__setup_sensors()
             threadList = []
             try:
-                threadList.append( threading.Thread(                        target=self.__cameraModuleImpl.doCameraModuleImpl ) )
-                self.__gps_en      and threadList.append( threading.Thread( target=self.__gpsModuleImpl   .doGpsModuleImpl    ) )
-                self.__bme280_en   and threadList.append( threading.Thread( target=self.__bme280Impl      .doBME280Impl       ) )
-                self.__mpu6050_en  and threadList.append( threading.Thread( target=self.__mpu6050Impl     .doMPU6050Impl      ) )
-                self.__icm20948_en and threadList.append( threading.Thread( target=self.__icm20948Impl    .doIcm20948Impl     ) )
-                time.sleep(1)
+                threadList.append( threading.Thread(                            target=self.__cameraModuleImpl.doCameraModuleImpl ) )
+                self.__gps_en          and threadList.append( threading.Thread( target=self.__gpsModuleImpl   .doGpsModuleImpl    ) )
+                self.__bme280_en       and threadList.append( threading.Thread( target=self.__bme280Impl      .doBME280Impl       ) )
+                self.__mpu6050_en      and threadList.append( threading.Thread( target=self.__mpu6050Impl     .doMPU6050Impl      ) )
+                self.__icm20948_en     and threadList.append( threading.Thread( target=self.__icm20948Impl    .doIcm20948Impl     ) )
+                self.__powermonitor_en and threadList.append( threading.Thread( target=self.__powermonitorImpl.doPowerMonitorImpl ) )
+                SensorWrapper.running.set()
                 for singleThread in threadList:
                     singleThread.start()
                 self.__garbage_colloction() # GC
@@ -362,6 +394,55 @@ class SensorWrapper:
         #######################################################################
 
 ########################################################################
+class PowerMonitorImpl:
+
+    def __init__( self , csvFile ):
+        print("[Info] Create an instance of the PowerMonitorImpl class.")
+        self.__csvFileWriter = csv.writer( csvFile )
+
+    def __get_voltage(self):
+        try:
+            out = subprocess.check_output(['vcgencmd', 'measure_volts']).decode()
+            return float(out.split('=')[1].replace('V', '').strip())
+        except Exception as e:
+            print(f"[Error] get_voltage(): {e}")
+            return None
+
+    def __get_throttled(self):
+        try:
+            out = subprocess.check_output(['vcgencmd', 'get_throttled']).decode()
+            return out.strip().split('=')[1]
+        except Exception as e:
+            print(e)
+            return None
+
+    def doPowerMonitorImpl(self):
+        print("[Info] Start the doPowerMonitorImpl function.")
+        while SensorWrapper.running.is_set():
+            try:
+                SensorWrapper.powermonitor_cond.acquire()
+                while not SensorWrapper.powermonitor_ready:
+                    SensorWrapper.powermonitor_cond.wait()
+                SensorWrapper.powermonitor_cond.release()
+
+                voltage             = self.__get_voltage()
+                throttled           = self.__get_throttled()
+                end_unix_epoch_time = time.time()
+                total_time          = end_unix_epoch_time - SensorWrapper.start_unix_epoch_time
+                data = [
+                    [
+                        total_time , SensorWrapper.start_unix_epoch_time , end_unix_epoch_time ,
+                        voltage , throttled
+                    ]
+                ]
+                self.__csvFileWriter.writerows( data )
+                SensorWrapper.powermonitor_ready = False
+            except (KeyboardInterrupt , ValueError) as e:
+                SensorWrapper.running.clear()
+            except Exception as e:
+                print(e)
+        
+########################################################################
 class BME280Impl:
 
     def __init__( self , bus , address , csvFile ):
@@ -384,9 +465,7 @@ class BME280Impl:
     def doBME280Impl(self):
         print("[Info] Start the doBME280Impl function.")
         try:
-            start_unix_epoch_time = time.time()
-
-            while SensorWrapper.running:
+            while SensorWrapper.running.is_set():
                 SensorWrapper.bme280_cond.acquire()
                 while not SensorWrapper.bme280_ready:
                     SensorWrapper.bme280_cond.wait()
@@ -394,10 +473,10 @@ class BME280Impl:
 
                 read24byte , read1Byte0xA1 , read7byte , read8byte = self.__read_sensor()
                 end_unix_epoch_time = time.time()
-                total_time          = end_unix_epoch_time - start_unix_epoch_time
+                total_time          = end_unix_epoch_time - SensorWrapper.start_unix_epoch_time
                 data = [
                     [
-                        total_time , start_unix_epoch_time , end_unix_epoch_time ,
+                        total_time , SensorWrapper.start_unix_epoch_time , end_unix_epoch_time ,
                         read24byte[ 0] , read24byte[ 1], read24byte[ 2], read24byte[ 3],
                         read24byte[ 4] , read24byte[ 5], read24byte[ 6], read24byte[ 7],
                         read24byte[ 8] , read24byte[ 9], read24byte[10], read24byte[11],
@@ -411,6 +490,9 @@ class BME280Impl:
                     ]
                 ]
                 self.__csvFileWriter.writerows( data )
+                SensorWrapper.bme280_ready = False
+        except (KeyboardInterrupt , ValueError) as e:
+            SensorWrapper.running.clear()
         except Exception as e:
             print(e)
 
@@ -434,10 +516,8 @@ class MPU6050Impl:
 
     def doMPU6050Impl(self):
         print("[Info] Start the doMPU6050Impl function.")
-        try:
-            start_unix_epoch_time = time.time()
-
-            while SensorWrapper.running:
+        while SensorWrapper.running.is_set():
+            try:
                 SensorWrapper.mpu6050_cond.acquire()
                 while not SensorWrapper.mpu6050_ready:
                     SensorWrapper.mpu6050_cond.wait()
@@ -445,11 +525,11 @@ class MPU6050Impl:
 
                 mpu6050_data        = self.__read_sensor()
                 end_unix_epoch_time = time.time()
-                total_time          = end_unix_epoch_time - start_unix_epoch_time
+                total_time          = end_unix_epoch_time - SensorWrapper.start_unix_epoch_time
                 if mpu6050_data is not None:
                     data = [
                         [
-                            total_time , start_unix_epoch_time , end_unix_epoch_time ,
+                            total_time , SensorWrapper.start_unix_epoch_time , end_unix_epoch_time ,
                             mpu6050_data[ 0] , mpu6050_data[ 1] , mpu6050_data[ 2] ,
                             mpu6050_data[ 3] , mpu6050_data[ 4] , mpu6050_data[ 5] ,
                             mpu6050_data[ 6] , mpu6050_data[ 7] , mpu6050_data[ 8] ,
@@ -458,9 +538,11 @@ class MPU6050Impl:
                         ]
                     ]
                     self.__csvFileWriter.writerows( data )
-                mpu6050Ready = False
-        except Exception as e:
-            print(e)
+                SensorWrapper.mpu6050_ready = False
+            except (KeyboardInterrupt , ValueError) as e:
+                SensorWrapper.running.clear()
+            except Exception as e:
+                print(e)
 
 ########################################################################
 class ICM20948Impl:
@@ -474,23 +556,21 @@ class ICM20948Impl:
 
     def doIcm20948Impl(self):
         print("[Info] Start the doIcm20948Impl function.")
-        try:
-            self.__imu.begin()
-            start_unix_epoch_time = time.time()
-
-            while SensorWrapper.running:
+        self.__imu.begin()
+        while SensorWrapper.running.is_set():
+            try:
                 SensorWrapper.icm20948_cond.acquire()
                 while not SensorWrapper.icm20948_ready:
                     SensorWrapper.icm20948_cond.wait()
                 SensorWrapper.icm20948_cond.release()
-            
+
                 if self.__imu.dataReady():
                     self.__imu.getAgmt()
                     end_unix_epoch_time = time.time()
-                    total_time          = end_unix_epoch_time - start_unix_epoch_time
+                    total_time          = end_unix_epoch_time - SensorWrapper.start_unix_epoch_time
                     data = [
                         [
-                            total_time , start_unix_epoch_time , end_unix_epoch_time ,
+                            total_time , SensorWrapper.start_unix_epoch_time , end_unix_epoch_time ,
                             self.__imu.axRaw  , self.__imu.ayRaw , self.__imu.azRaw ,
                             self.__imu.gxRaw  , self.__imu.gyRaw , self.__imu.gzRaw ,
                             self.__imu.mxRaw  , self.__imu.myRaw , self.__imu.mxRaw ,
@@ -498,8 +578,11 @@ class ICM20948Impl:
                         ]
                     ]
                     self.__csvFileWriter.writerows( data )
-        except Exception as e:
-            print(e)
+                    SensorWrapper.icm20948_ready = False
+            except (KeyboardInterrupt , ValueError) as e:
+                SensorWrapper.running.clear()
+            except Exception as e:
+                print(e)
 
 ########################################################################
 class GPSModuleImpl:
@@ -551,10 +634,10 @@ class GPSModuleImpl:
                     num_sv_in_view      = gsv.num_sv_in_view
                     frame               = dict.fromkeys(frame, None)
                     end_unix_epoch_time = time.time()
-                    total_time          = end_unix_epoch_time - start_unix_epoch_time
+                    total_time          = end_unix_epoch_time - SensorWrapper.start_unix_epoch_time
                     data = [
                         [
-                            total_time , start_unix_epoch_time , end_unix_epoch_time ,
+                            total_time , SensorWrapper.start_unix_epoch_time , end_unix_epoch_time ,
                             latitude       , longitude          , altitude       ,
                             altitude_units , num_sats           , datestamp      ,
                             timestamp      , spd_over_grnd      , true_course    ,
@@ -594,63 +677,76 @@ class CameraModuleImpl:
         self.__picamera2.post_callback = self.__process_frame
         self.__movieFile               = movieFileName
         self.__csvFileWriter           = csv.writer( csvFile )
-        self.__start_unix_epoch_time   = None
         self.__end_unix_epoch_time     = None
 
     def __process_frame( self, request ):
-        SensorWrapper.camera_module_cond.acquire()
-        SensorWrapper.bme280_cond       .acquire()
-        SensorWrapper.mpu6050_cond      .acquire()
-        SensorWrapper.icm20948_cond     .acquire()
-        SensorWrapper.camera_module_cond.notify()
-        SensorWrapper.bme280_cond       .notify()
-        SensorWrapper.mpu6050_cond      .notify()
-        SensorWrapper.icm20948_cond     .notify()
+        SensorWrapper.camera_module_cond   .acquire()
+        SensorWrapper.bme280_cond          .acquire()
+        SensorWrapper.mpu6050_cond         .acquire()
+        SensorWrapper.icm20948_cond        .acquire()
+        SensorWrapper.powermonitor_cond    .acquire()
+        SensorWrapper.camera_module_cond   .notify()
+        if ((self.__frame_count % 30) == 0) :
+            SensorWrapper.bme280_cond      .notify()
+        if ((self.__frame_count % 150) == 0) :
+            SensorWrapper.powermonitor_cond.notify()
+        SensorWrapper.mpu6050_cond         .notify()
+        SensorWrapper.icm20948_cond        .notify()
         SensorWrapper.camera_module_ready = True
         SensorWrapper.bme280_ready        = True
         SensorWrapper.mpu6050_ready       = True
         SensorWrapper.icm20948_ready      = True
-        SensorWrapper.camera_module_cond.release()
-        SensorWrapper.bme280_cond       .release()
-        SensorWrapper.mpu6050_cond      .release()
-        SensorWrapper.icm20948_cond     .release()
+        SensorWrapper.powermonitor_ready  = True
+        SensorWrapper.camera_module_cond   .release()
+        SensorWrapper.bme280_cond          .release()
+        SensorWrapper.mpu6050_cond         .release()
+        SensorWrapper.icm20948_cond        .release()
+        SensorWrapper.powermonitor_cond    .release()
         self.__end_unix_epoch_time = time.time()
         self.__frame_count += 1
         self.__frame_ready.set()
 
     def __output_camera_module_csv( self ):
-        while SensorWrapper.running:
-            SensorWrapper.camera_module_cond.acquire()
-            while not SensorWrapper.camera_module_ready:
-                SensorWrapper.camera_module_cond.wait()
-            SensorWrapper.camera_module_cond.release()
-            total_time = self.__end_unix_epoch_time - self.__start_unix_epoch_time
-            data = [
-                [
-                    total_time , self.__start_unix_epoch_time , self.__end_unix_epoch_time ,
-                    self.__frame_count
+        while SensorWrapper.running.is_set():
+            try:
+                SensorWrapper.camera_module_cond.acquire()
+                while not SensorWrapper.camera_module_ready:
+                    SensorWrapper.camera_module_cond.wait()
+                SensorWrapper.camera_module_cond.release()
+
+                total_time = self.__end_unix_epoch_time - SensorWrapper.start_unix_epoch_time
+                data = [
+                    [
+                        total_time , SensorWrapper.start_unix_epoch_time , self.__end_unix_epoch_time ,
+                        self.__frame_count
+                    ]
                 ]
-            ]
-            self.__csvFileWriter.writerows( data )
-            SensorWrapper.camera_module_ready = False
-        
+                self.__csvFileWriter.writerows( data )
+                SensorWrapper.camera_module_ready = False
+            except (KeyboardInterrupt , ValueError) as e:
+                 SensorWrapper.running.clear()
+            except Exception as e:
+                print(e)
+            
     def doCameraModuleImpl( self ):
         print("[Info] Start the doCameraModuleImpl function.")
-        try:
-            self.__start_unix_epoch_time = time.time()
-            cameraThread = threading.Thread( target=self.__output_camera_module_csv )
-            cameraThread.start()
-            self.__picamera2.start()
-            self.__picamera2.start_encoder( self.__encoder , output=self.__movieFile )
-            while SensorWrapper.running:
+        SensorWrapper.start_unix_epoch_time = time.time()
+        cameraThread = threading.Thread( target=self.__output_camera_module_csv )
+        cameraThread.start()
+        self.__picamera2.start()
+        self.__picamera2.start_encoder( self.__encoder , output=self.__movieFile )
+        while SensorWrapper.running.is_set():
+            try:
                 if self.__frame_ready.wait(timeout=1.0):
                     self.__frame_ready.clear()
-            cameraThread.join()
-        except Exception as e:
-            print(e)
-        finally:
-            self.__picamera2.stop_encoder()
-            self.__picamera2.stop()
+                cameraThread.join()
+            except (KeyboardInterrupt , ValueError) as e:
+                SensorWrapper.running.clear()
+            except Exception as e:
+                print(e)
+            finally:
+                self.__picamera2.stop_encoder()
+                self.__picamera2.stop()
                 
 ########################################################################
 class SensorAnalyzerImpl:
