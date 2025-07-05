@@ -21,6 +21,7 @@
 space_balloon.pyは以下機能を提供する。
 センサーからデータを取得しcsv形式で出力する機能。
 センサーから取得したデータを解析し加工する機能。
+ICM-20948のキャリブレーション機能。
 
 ### 1-2. クラス構成
 
@@ -149,8 +150,7 @@ csvファイルについてセンサー取得モード時はオプションで�
 
 以下はカメラモジュールの出力csvは以下で、*センサー取得モード*時に出力する。
 先頭行にカメラモジュールバージョンがログ説明が必ず入る。
-なお、後述する[4. カメラモジュールを用いた動画取得について](#4-カメラモジュールを用いた動画取得について)の[4-2. Pythonコードの説明](#4-2-pythonコードの説明)に記載してあるように、libcamera-vidのオプションで出力するログの形式となる。
-このcsvはlibcamera-vidで撮影した動画における1フレームあたりの撮影時間をミリ秒で表している。
+なお、後述する[4. カメラモジュールを用いた動画取得について](#4-カメラモジュールを用いた動画取得について)の[4-2. Pythonコードの説明](#4-2-pythonコードの説明)に記載してあるように、Pythonのpicamera2ライブラリでフレーム毎に同期した結果となっている。
 
 ```text
       start_epoch_time  end_unix_epoch_time  frame_count
@@ -170,10 +170,8 @@ csvファイルについてセンサー取得モード時はオプションで�
 ##### 1-4-1-2. BME280計測データ取得
 
 以下はBME280の出力csvは以下で、*センサー取得モード*時に出力する。
-- elapsed_timeは初回計測開始からの経過時間を秒単位で表している。
-- start_epoch_timeは初回計測開始時刻のUNIXエポックタイムを表している。
-- unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
-- temperatureはBME280から取得した温度、pressureは気圧、humidityは湿度を表している。
+- end_unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
+- bme280_byte_**はセンサーレジスタ値を表している。
 
 ```text
     end_unix_epoch_time  bme280_byte_00  bme280_byte_01  bme280_byte_02  bme280_byte_03  bme280_byte_04  bme280_byte_05  bme280_byte_06  bme280_byte_07  bme280_byte_08  bme280_byte_09  ...  bme280_byte_29  bme280_byte_30  bme280_byte_31  bme280_byte_32  bme280_byte_33  bme280_byte_34  bme280_byte_35  bme280_byte_36  bme280_byte_37  bme280_byte_38  bme280_byte_39
@@ -193,12 +191,8 @@ csvファイルについてセンサー取得モード時はオプションで�
 ##### 1-4-1-3. MPU6050計測データ取得
 
 以下はMPU6050の出力csvは以下で、*センサー取得モード*時に出力する。
-- elapsed_timeは初回計測開始からの経過時間を秒単位で表している。
-- start_epoch_timeは初回計測開始時刻のUNIXエポックタイムを表している。
-- unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
-- ax、ayおよびazはMPU6050から取得した加速度を表している。
-- gx、gyおよびgzはMPU6050から取得した角速度を表している。
-- temperatureはMPU6050から取得した温度を表している。
+- end_unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
+- mpu6050_byte_**はセンサーレジスタ値を表している。
 
 ```text
       end_unix_epoch_time  mpu6050_byte_00  mpu6050_byte_01  mpu6050_byte_02  mpu6050_byte_03  mpu6050_byte_04  mpu6050_byte_05  mpu6050_byte_06  mpu6050_byte_07  mpu6050_byte_08  mpu6050_byte_09  mpu6050_byte_10  mpu6050_byte_11  mpu6050_byte_12  mpu6050_byte_13
@@ -215,20 +209,14 @@ csvファイルについてセンサー取得モード時はオプションで�
 2747         1.751543e+09              255               20                2               56               73               76              248              128                0               28              255              152              255               54
 ```
 
-##### 1-4-1-4. MPU9250計測データ取得
-
-MPU9250は生産終了に伴い未実装となっている。
-
-##### 1-4-1-5. ICM-20948計測データ取得
+##### 1-4-1-4. ICM-20948計測データ取得
 
 以下はICM-20948の出力csvは以下で、*センサー取得モード*時に出力する。
-- elapsed_timeは初回計測開始からの経過時間を秒単位で表している。
-- start_epoch_timeは初回計測開始時刻のUNIXエポックタイムを表している。
-- unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
-- ax、ayおよびazはICM-20948から取得した加速度を表している。
-- gx、gyおよびgzはICM-20948から取得した角速度を表している。
-- mx、myおよびmzはICM-20948から取得した地磁気を表している。
-- temperatureはICM-20948から取得した温度を表している。
+- end_unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
+- icm-20948_rawa*はICM-20948から取得したセンサー生データの加速度を表している。
+- icm-20948_rawg*はICM-20948から取得したセンサー生データの角速度を表している。
+- icm-20948_rawm*はICM-20948から取得したセンサー生データの地磁気を表している。
+- icm-20948_rawtemperatureはから取得したセンサー生データの温度を表している。
 
 ```text
       end_unix_epoch_time  icm-20948_rawax  icm-20948_raway  icm-20948_rawaz  icm-20948_rawgx  icm-20948_rawgy  icm-20948_rawgz  icm-20948_rawmx  icm-20948_rawmy  icm-20948_rawmz  icm-20948_rawtemperature
@@ -245,13 +233,11 @@ MPU9250は生産終了に伴い未実装となっている。
 2747         1.751543e+09            -1568              216            16256              150              399             -233               44             -276               44                      3248
 ```
 
-##### 1-4-1-6. IVK172 G-Mouse USB GPS計測データ取得
+##### 1-4-1-5. IVK172 G-Mouse USB GPS計測データ取得
 
 以下はIVK172 G-Mouse USB GPSの出力csvは以下で、*センサー取得モード*時に出力する。
-- elapsed_timeは初回計測開始からの経過時間を秒単位で表している。
-- start_epoch_timeは初回計測開始時刻のUNIXエポックタイムを表している。
+- end_unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
 - 他計測値は、[9. IVK172 G-Mouse USB GPSを用いた計測データの取得について](#9-IVK172-G-Mouse-USB-GPSを用いた計測データの取得について)に記載している。
-- GPSデータの計測でNaNが多いのは、IVK172 G-Mouse USB GPSからのデータ更新時間が長く、経度、緯度および高度を優先してcsv出力するためである。
 
 ```text
    end_unix_epoch_time  ivk172_latitude  ivk172_longitude  ivk172_altitude ivk172_altitude_units  ivk172_num_sats ivk172_datestam ivk172_timestamp  ivk172_spd_over_grnd  ivk172_true_course  ivk172_true_track  ivk172_spd_over_grnd_kmph  ivk172_pdop  ivk172_hdop  ivk172_vdop  ivk172_num_sv_in_view
@@ -267,6 +253,35 @@ MPU9250は生産終了に伴い未実装となっている。
 9         1.751543e+09        40.981492        140.175168             69.7                     M                5      2025-07-03   11:43:33+00:00                 1.306                 NaN                NaN                      2.418         2.26         1.52         1.67                     10
 ```
 
+##### 1-4-1-6. PowerMonitorデータ取得
+
+以下はPowerMonitorの出力csvは以下で、*センサー取得モード*時に出力する。
+- end_unix_epoch_timeはcsv出力可能時刻のUNIXエポックタイムを表している。
+- 取得データについては[8-1. PowerMonitorについて](#8-1-PowerMonitorについて)に記載してある。
+
+```text
+    end_unix_epoch_time  voltage throttled_status  cpu_utilization  memory_usage  memory_capacity  memory_usage_percentage  cpu_temperature   disk_usage  total_disk_capacity  disk_utilization
+0          1.751543e+09   0.8375              0x0              6.0     567164928       3981889536                     17.2            42842  14999670784         125242245120              12.6
+1          1.751543e+09   0.8375              0x0              4.1     560594944       3981889536                     17.0            44303  15004790784         125242245120              12.6
+2          1.751543e+09   0.8375              0x0             10.8     551673856       3981889536                     16.8            44303  15009771520         125242245120              12.6
+3          1.751543e+09   0.8375              0x0             11.1     544198656       3981889536                     16.6            43816  15014752256         125242245120              12.6
+4          1.751543e+09   0.8375              0x0             10.9     536068096       3981889536                     16.4            43329  15019757568         125242245120              12.6
+5          1.751543e+09   0.8375              0x0             10.9     534990848       3981889536                     16.4            44790  15024775168         125242245120              12.6
+6          1.751543e+09   0.8375              0x0             12.7     534900736       3981889536                     16.4            43816  15029755904         125242245120              12.6
+7          1.751543e+09   0.8375              0x0             10.6     534134784       3981889536                     16.3            43329  15034757120         125242245120              12.6
+8          1.751543e+09   0.8375              0x0             11.1     533495808       3981889536                     16.3            44303  15039922176         125242245120              12.7
+9          1.751543e+09   0.8375              0x0             11.4     534990848       3981889536                     16.4            43816  15044902912         125242245120              12.7
+10         1.751543e+09   0.8375              0x0             11.7     533229568       3981889536                     16.3            44790  15049883648         125242245120              12.7
+11         1.751543e+09   0.8375              0x0             11.6     532779008       3981889536                     16.3            44303  15054909440         125242245120              12.7
+12         1.751543e+09   0.8375              0x0             11.6     532480000       3981889536                     16.3            43329  15059939328         125242245120              12.7
+13         1.751543e+09   0.8375              0x0             11.8     532836352       3981889536                     16.3            44790  15064944640         125242245120              12.7
+14         1.751543e+09   0.8375              0x0             11.1     532381696       3981889536                     16.3            44790  15070007296         125242245120              12.7
+15         1.751543e+09   0.8375              0x0             11.4     532963328       3981889536                     16.3            45277  15075057664         125242245120              12.7
+16         1.751543e+09   0.8375              0x0             11.1     532381696       3981889536                     16.3            44303  15080058880         125242245120              12.7
+17         1.751543e+09   0.8375              0x0             11.1     533110784       3981889536                     16.3            45277  15085096960         125242245120              12.7
+18         1.751543e+09   0.8375              0x0             10.7     533385216       3981889536                     16.3            43816  15090069504         125242245120              12.7
+```
+
 #### 1-4-2.センサーデータ解析モード
 
 センサーデータ解析モードでは、オプションに応じて以下を取得する。
@@ -274,23 +289,15 @@ MPU9250は生産終了に伴い未実装となっている。
 - 動画の1フレーム毎のタイムスタンプ
 - BME280の計測温度、気圧および湿度
 - MPU6050の計測加速度、角速度および温度
+- ICM-20948の計測加速度、角速度、地磁気および温度
+- IVK172 G-Mouse USB GPSの緯度、経度、高度など
+- PowerMonitorデータ(byteをGBやMBに変換)
 
-#### 1-4-3.モード別クラスデータパス
+##### 1-4-2-1. 動画データとセンサーデータの同期
 
-センサー取得モード時は以下のデータパスで動作する。
-
-<img src="fig/Sensor_Data_Acquisition_Mode_Operation.svg" width= "700px" >
-
-センサーデータ解析モード時は以下のデータパスで動作する。
-
-<img src="fig/Sensor_Data_Analysis_Mode_Operation.svg" width= "700px" >
-
-##### 1-4-2-1. 高度の算出
-
-以下は*センサーデータ解析モード*時に出力する、BME280計測結果を加工したcsvである。
-*センサー取得モード*時に出力したcsvに高度を追加している。
-- current_timeは、BME280から*センサー取得モード*時に取得したunix_epoch_timeを日時・時刻形式にした結果を表している。
-- altitudeは、BME280*センサー取得モード*時に取得した温度、気圧および湿度をもとに算出した高度を表している。
+以下は*センサーデータ解析モード*時に出力する、カメラモジュールの出力csvおよびI2Cセンサー計測結果をマージしたcsvである。
+- current_timeは、カメラモジュールの出力csvから*センサー取得モード*時に取得したend_unix_epoch_timeを日時・時刻形式にした結果を表している。
+- マージデータはI2Cセンサーの*センサー取得モード*時のcsvから抽出し、end_unix_epoch_timeが近いデータを表している。 
 
 なお、高度の算出は後述する[5-2. 高度の算出方法について](#5-2-高度の算出方法について)に示す。
 
@@ -307,86 +314,85 @@ MPU9250は生産終了に伴い未実装となっている。
 2745      1.751543e+09         2745               1.751543e+09                1.751543e+09        40.968532        140.174894             69.7                     M                5      2025-07-03   11:43:33+00:00                 1.306                 NaN                NaN                      2.418         2.26         1.52         1.67                     10             1.751543e+09                  1.751543e+09                 1.751543e+09  2025-07-03 20:44:54.943               28.51      1009.124860        64.325195        36.008910   -0.003174    0.038818    1.154785   -0.335878   -1.404580   -1.832061            30.788824     -0.098633      0.013184      1.006836      0.053435      0.839695     -0.236641          45.0        -272.0          45.0              30.776260              -1.406840             279.393991
 2746      1.751543e+09         2746               1.751543e+09                1.751543e+09        40.989889        140.175123             69.7                     M                5      2025-07-03   11:43:33+00:00                 1.306                 NaN                NaN                      2.418         2.26         1.52         1.67                     10             1.751543e+09                  1.751543e+09                 1.751543e+09  2025-07-03 20:44:54.977               28.51      1009.124860        64.325195        36.008910   -0.002441    0.029541    1.144531    0.022901   -0.923664   -1.633588            30.835882     -0.098633      0.021973      1.012207      0.977099     -0.358779      2.885496          49.0        -287.0          49.0              30.776260              -1.401695             279.688787
 2747      1.751543e+09         2747               1.751543e+09                1.751543e+09        40.981492        140.175168             69.7                     M                5      2025-07-03   11:43:33+00:00                 1.306                 NaN                NaN                      2.418         2.26         1.52         1.67                     10             1.751543e+09                  1.751543e+09                 1.751543e+09  2025-07-03 20:44:55.006               28.51      1009.124860        64.325195        36.008910   -0.014404    0.034668    1.145264    0.213740   -0.793893   -1.541985            30.882941     -0.095703      0.013184      0.992188      1.145038      3.045802     -1.778626          44.0        -276.0          44.0              30.728337              -1.412706             279.057888
-
 ```
 
-##### 1-4-2-2. BME280から取得したデータのグラフ作成機能
+#### 1-4-3.ICM-20948キャリブレーションモード
 
-matplotlibライブラリで出力するようにする予定だが、今回は未実装となっている。
+ICM-20948キャリブレーションモードでは以下を取得する。
+- ハードアイアン補正値
+- ソフトアイアン補正値
 
-##### 1-4-2-3. MPU6050から取得したデータのグラフ作成機能
+補正方法は[7-3. 地磁気センサーのキャリブレーション](#7-3-地磁気センサーのキャリブレーション)に説明を記載している。
 
-matplotlibライブラリで出力するようにする予定だが、今回は未実装となっている。
+以下に補正値の出力jsonファイルを示す。
 
-##### 1-4-2-4. MPU9250から取得したデータのグラフ作成機能
-
-matplotlibライブラリで出力するようにする予定だが、今回は未実装となっている。
-
-<!--
-##### 1-4-2-5. 動画データとセンサーデータの同期
-
-以下は*センサーデータ解析モード*時に出力する、カメラモジュールの出力csvおよびBME280計測結果をマージしたcsvである。
-- current_timeは、カメラモジュールの出力csvから*センサー取得モード*時に取得したunix_epoch_timeを日時・時刻形式にした結果を表している。
-- マージデータはBME280の*センサー取得モード*時のcsvから抽出し、unix_epoch_timeが近いデータを表している。
-  - 近いデータの抽出には、`--tolerance`オプションで指定した許容差分範囲以内のデータを抽出する。
-  - `--tolerance`オプションで指定した許容差分に収まるデータが無い場合計測データがないと判断し空欄となる。
-- bme280_unix_epoch_time_deltaはカメラモジュールの出力csvおよびBME280の*センサー取得モード*時のcsvにおけるunix_epoch_timeから差分を表している。
-  - 例えば、bme280_unix_epoch_time_deltaが0.001412であると、カメラモジュールから取得した時刻とBME280からデータを取得した時刻は1.4msecの時間差があることを表している。
-
-なお、今回の例はBME280だが、MPU6050など他センサーの計測結果もマージ可能である。
-
-```text
-milli_sec_elapsed_time  sec_elapsed_time  unix_epoch_time             current_time  bme280_elapsed_time  ...  bme280_unix_epoch_time  bme280_temperature  bme280_pressure  bme280_humidity  bme280_unix_epoch_time_delta
-                 0.000          0.000000     1.745854e+09  2025-04-29 00:21:55.150             1.001782  ...            1.745854e+09           28.721297       997.993792        38.740915                      0.001412
-                33.327          0.033327     1.745854e+09  2025-04-29 00:21:55.183             1.045655  ...            1.745854e+09           28.721297       998.020366        38.986017                      0.009134
-                66.655          0.066655     1.745854e+09  2025-04-29 00:21:55.216             1.067328  ...            1.745854e+09           28.716246       998.038235        39.209310                      0.002522
-                99.981          0.099981     1.745854e+09  2025-04-29 00:21:55.250             1.109899  ...            1.745854e+09           28.726348       998.082217        38.659212                      0.006723
-               133.308          0.133308     1.745854e+09  2025-04-29 00:21:55.283             1.131053  ...            1.745854e+09           28.721297       998.073513        39.040482                      0.005450
-                   ...               ...              ...                      ...                  ...  ...                     ...                 ...              ...              ...                           ...
-              6032.182          6.032182     1.745854e+09  2025-04-29 00:22:01.182             7.042190  ...            1.745854e+09           28.751604       998.072588        38.697348                      0.006813
-              6065.511          6.065511     1.745854e+09  2025-04-29 00:22:01.215             7.063206  ...            1.745854e+09           28.736450       998.019902        39.242017                      0.005499
-              6098.837          6.098837     1.745854e+09  2025-04-29 00:22:01.249             7.104738  ...            1.745854e+09           28.741502       998.002031        38.958802                      0.002707
-              6132.164          6.132164     1.745854e+09  2025-04-29 00:22:01.282             7.125377  ...            1.745854e+09           28.746553       998.037310        38.604742                      0.009982
-              6165.490          6.165490     1.745854e+09  2025-04-29 00:22:01.315             7.166440  ...            1.745854e+09           28.756655       998.054717        38.294218                      0.002244
+```sh
+hoge
 ```
--->
+
+この補正値を読み込み、取得した計測データに反映する。
+
+#### 1-4-4.モード別クラスデータパス
+
+センサー取得モード時は以下のデータパスで動作する。
+
+<img src="fig/Sensor_Data_Acquisition_Mode_Operation.svg" width= "700px" >
+
+センサーデータ解析モード時は以下のデータパスで動作する。
+
+<img src="fig/Sensor_Data_Analysis_Mode_Operation.svg" width= "700px" >
 
 ## 2. 動作環境
 
 計測はRaspberry Pi Zero 2 W、計測結果の加工はRaspberry Pi 4Bを使用する。
 それぞれのスペックについては[付録](#付録)の[Raspberry Piのスペック表](#Raspberry-Piのスペック表)に記載している。
-OSはRaspberry Pi OSでDebinanベースのディストリビューションバージョンBullseyeを使用する。
+OSはRaspberry Pi OSでDebinanベースのディストリビューションバージョンBookwarmを使用する。
 
 ## 3. 実行方法
 
 実行にはモードを選択し*センサー取得モード*または*センサーデータ解析モード*を選択する。
 また有効にしたいセンサーを選択し実行する。
 
-*センサー取得モード*でカメラ、BME280およびMPU6050を有効にし各デバイスアドレスを指定した上で、出力結果格納先を指定した実行例は以下となる。
+*センサー取得モード*でカメラ、BME280、MPU6050、ICM-20948、PowerMonitorおよびIVK172 G-Mouse USB GPSを有効にし各デバイスアドレスおよびI2C bus番号を指定した上で、出力結果格納先を指定した実行例は以下となる。
 
 ```sh
-$ python space_balloon.py   \
-       --mode 0             \
-       --camera             \
-       --bme280             \
-       --bme280_addr 0x76   \
-       --mpu6050            \
-       --mpu6050_addr 0x68  \
+python space_balloon.py      \
+       --mode 0              \
+       --bme280              \
+       --bme280_addr 0x76    \
+       --bme280_i2cbus 4     \
+       --mpu6050             \
+       --mpu6050_addr 0x68   \
+       --mpu6050_i2cbus 3    \
+       --icm20948            \
+       --icm20948_addr 0x68  \
+       --icm20948_i2cbus 1   \
+       --powermonitor        \
+       --gps                 \
+       --gps_interval 1      \
        --output_dir ./output
 ```
 
-*センサーデータ解析モード*でカメラ、BME280およびMPU6050を取得結果を指定し、高度算出および動画データに同期した計測結果を生成するための実行例は以下となる。
+*センサーデータ解析モード*でカメラ・I2Cセンサー計測データとの同期をしてICM-20948のキャリブレーションデータを使用しMP4で動画を出力し、Excelファイルで同期結果を出力するための実行例は以下となる。
 
 ```sh
-$ python space_balloon.py                                     \
-        --mode 1                                              \
-        --frame_sync                                          \
-        --altitude                                            \
-        --movie       ./output/video_1745853715.150165.h264   \
-        --movie_csv   ./output/video_1745853715.1501062.csv   \
-        --tolerance   0.015                                   \
-        --bme280_csv  ./output/bme280_1745853714.1328616.csv  \
-        --mpu6050_csv ./output/mpu6050_1745853714.1328616.csv
+python space_balloon.py                                     \
+       --mode 1                                             \
+       --mp4                                                \
+       --frame_sync                                         \
+       --excel                                              \
+       --calib_json ./output/20250701_223019/mag_calib.json \
+       --input_dir ./output/20250702_222933
+```
+
+*ICM-20948キャリブレーションモード*を実行する例は以下となる。
+
+```sh
+python space_balloon.py     \
+       --mode 2             \
+       --icm20948_addr 0x68 \
+       --icm20948_i2cbus 1  \
+       --output_dir output
 ```
 
 ## 4. カメラモジュールを用いた動画取得について
@@ -396,50 +402,127 @@ v2かv3でPythonスクリプトの差分は発生しないが、今回はv2で�
 
 ### 4-1. センサー取得モード時の動画ファイルおよび出力csvファイル
 
-[1-3-3. csvファイルおよびDataFrame](#1-3-3-csvファイルおよびdataframe)に示すようなcsvファイルを出力する。
+動画ファイルはH264フォーマットの動画ファイル、csvファイルは[1-4-1-1. 動画取得](#1-4-1-1-動画取得)に示すようなcsvファイルを出力する。
 
 ### 4-2. Pythonコードの説明
 
-<!-->
-カメラモジュールを用いて撮影し動画を出力するには、libcamera-vidコマンドで取得できる。
-Pythonのコードでは以下のようにlibcamera-vidを呼び出している。
+カメラモジュールを用いて撮影し動画を出力するには、`CameraModuleImpl`クラスで取得できる。
+Pythonのコードを以下に示す。
+
+以下がコンストラクタで、`CameraModuleImpl`クラスインスタンス時にcsvのファイルの変数、csvのファイル名、保存動画ファイル名、フレームレート、ビットレート、水平サイズおよび垂直サイズを指定する。
+コンストラクタでpicamera2ライブラリを用いて撮影準備をする。
+- フレームレートは1フレーム当たりの秒数をμ秒単位で設定する。
+- H264ハードウェアエンコードをビットレート指定で使用するための設定をする。
+- picamera2のライブラリの構成設定をして画素フォーマット、画サイズ設定およびフレームレート設定をする。
 
 ```py
-    def __start_camera_module( self ):
-        while True:
-            if  SensorWrapper.bme280_startedFlg and  SensorWrapper.mpu6050_startedFlg and  SensorWrapper.mpu9250_startedFlg and SensorWrapper.icm20948_startedFlg and SensorWrapper.gps_startedFlg:
-                break
-            else:
-                time.sleep(1)
-
-        subprocess.run(
-            "libcamera-vid --framerate "    + str( self.__framerate) +
-            " --bitrate "                   + str( self.__bitrate ) +
-            " --width "                     + str( self.__width ) +
-            " --height "                    + str( self.__height ) +
-            " --save-pts "                  + str( self.__csvFilePath ) + "/video_"
-            + str(time.time()) + ".csv -o " + str( self.__csvFilePath ) +"/video_"
-            + str(time.time()) +".h264 --timeout 0 --nopreview",
-            shell          = True ,
-            capture_output = True ,
-            text           = True
-        )
+def __init__( self , csvFileName , csvFile , movieFileName , framerate , bitrate , width , height ):
+    print("[Info] Create an instance of the CameraModuleImpl class.")
+    self.__frame_ready   = threading.Event()
+    self.__frame_count   = 0
+    framerate_microsec   = int(1.0/framerate*1_000_000) # ex) 30fps = 1/30s = 33333μs
+    self.__picamera2     = Picamera2()
+    self.__encoder       = H264Encoder(bitrate=bitrate)
+    config               = self.__picamera2.create_video_configuration(
+        main     = { "format"             : "YUV420" , "size": ( width , height )       } ,
+        controls = { "FrameDurationLimits": ( framerate_microsec , framerate_microsec ) }
+    )
+    self.__picamera2.configure( config )
+    self.__picamera2.post_callback = self.__process_frame
+    self.__movieFile               = movieFileName
+    self.__csvFileWriter           = csv.writer( csvFile )
+    self.__end_unix_epoch_time     = None
 ```
 
-libcamera-vidの呼び出ではオプションで以下を指定している。
-- --framerate：撮影時のフレームレート設定
-- --bitrate：撮影時のビットレート設定
-- --width：撮影時に水平サイズ
-- --height：撮影時に垂直サイズ
-- --save-opt：フレーム毎のタイムスタンプをミリ秒単位で出力する設定
-- -o：出力先動画ファイル名
-- --timeout：タイムアウト時間をミリ秒で設定(0にすることで無制限)
-- --nopreview：GUIで撮影プレビューを表示しなくする設定
--->
+以下`__process_frame`関数はpicamera2ライブラリで動画を取得した際に、1フレーム毎に発行するソフトVSYNCをもとに実行する関数となる。
+`SensorWrapper`クラスで設定した`threading.Condition()`を用いてマルチスレッドで並列動作しているI2CセンサーにソフトVSYNC同期で実行をするための同期処理をしている。
+なお、I2Cセンサーデータで取得する1回あたりの実行時間がフレームレート毎に決まる1フレーム当たりの秒数以内に完了する制約がある。
+[付録](#付録)の[I2C通信クロック別実行時間計測](#I2C通信クロック別実行時間計測)に示すようにI2C通信バスクロック別に1回あたりの実行時間例を示している。
+I2C通信バスでデータを取得する場合BME280でレジスタデータのみ取得するのであれば100KHzで100回あたり0.5979秒であるため1回あたり0.005979秒となる。
+フレームレート30fpsの場合、1フレームあたり1/30=0.03333秒で処理することからBME280を100KHzで使用する場合、制約を満たしていることとなる。
+
+```py
+def __process_frame( self, request ):
+    SensorWrapper.camera_module_cond   .acquire()
+    SensorWrapper.bme280_cond          .acquire()
+    SensorWrapper.mpu6050_cond         .acquire()
+    SensorWrapper.icm20948_cond        .acquire()
+    SensorWrapper.powermonitor_cond    .acquire()
+    SensorWrapper.camera_module_cond   .notify()
+    if ((self.__frame_count % 30) == 0) :
+        SensorWrapper.bme280_cond      .notify()
+    if ((self.__frame_count % 150) == 0) :
+        SensorWrapper.powermonitor_cond.notify()
+    SensorWrapper.mpu6050_cond         .notify()
+    SensorWrapper.icm20948_cond        .notify()
+    SensorWrapper.camera_module_ready = True
+    SensorWrapper.bme280_ready        = True
+    SensorWrapper.mpu6050_ready       = True
+    SensorWrapper.icm20948_ready      = True
+    SensorWrapper.powermonitor_ready  = True
+    SensorWrapper.camera_module_cond   .release()
+    SensorWrapper.bme280_cond          .release()
+    SensorWrapper.mpu6050_cond         .release()
+    SensorWrapper.icm20948_cond        .release()
+    SensorWrapper.powermonitor_cond    .release()
+    self.__end_unix_epoch_time = time.time()
+    self.__frame_ready.set()
+```
+
+以下`doCameraModuleImpl`関数はコンストラクタで設定したpicamera2ライブラリから動作撮影およびH264エンコード処理を有効化し非同期で開始する。
+また`__output_camera_module_csv`関数もマルチスレッドで非同期実行している。
+ソフトVSYNCの制御も実施しており、`SensorWrapper`クラスで設定した`running`変数が有効な間はソフトVSYNCのHIGH/LOW切り替えを行う。
+
+```py
+def doCameraModuleImpl( self ):
+    print("[Info] Start the doCameraModuleImpl function.")
+    SensorWrapper.start_unix_epoch_time = time.time()
+    cameraThread = threading.Thread( target=self.__output_camera_module_csv )
+    cameraThread.start()
+    self.__picamera2.start()
+    self.__picamera2.start_encoder( self.__encoder , output=self.__movieFile )
+    while SensorWrapper.running.is_set():
+        try:
+            if self.__frame_ready.wait(timeout=1.0):
+                self.__frame_ready.clear()
+            cameraThread.join()
+        except (KeyboardInterrupt , ValueError) as e:
+            SensorWrapper.running.clear()
+        except Exception as e:
+            print(e)
+        finally:
+            self.__picamera2.stop_encoder()
+            self.__picamera2.stop()
+```
+
+以下`__output_camera_module_csv`関数はcsvで動画の1フレーム取得時刻およびフレーム番号をcsvに出力する。
+
+```py
+def __output_camera_module_csv( self ):
+    while SensorWrapper.running.is_set():
+        try:
+            SensorWrapper.camera_module_cond.acquire()
+            while not SensorWrapper.camera_module_ready:
+                SensorWrapper.camera_module_cond.wait()
+            SensorWrapper.camera_module_cond.release()
+
+            data = [
+                [
+                    SensorWrapper.start_unix_epoch_time , self.__end_unix_epoch_time , self.__frame_count
+                ]
+            ]
+            self.__csvFileWriter.writerows( data )
+            self.__frame_count += 1
+            SensorWrapper.camera_module_ready = False
+        except (KeyboardInterrupt , ValueError) as e:
+             SensorWrapper.running.clear()
+        except Exception as e:
+            print(e)
+```
 
 ### 4-3. センサーデータ解析モード時の動画ファイル
 
-***センサーデータ解析モード***では`SensorAnalyzerImpl`クラスの`__separation_h264_to_jpeg`、`__merge_jpeg_to_h264`および`__convert_h264_to_mp4`関数を用いて***センサー取得モード時***のH.264動画を変換している。
+***センサーデータ解析モード***では`SensorAnalyzerImpl`クラスから`MovieAnalyzerImpl`クラスをインスタンスし***センサー取得モード時***のH.264動画を変換している。
 
 以下に実行の流れを記載する。
 - `__separation_h264_to_jpeg`関数で***センサー取得モード時***のH.264動画をJPEG画像に1フレームずつ分割する。
@@ -448,55 +531,11 @@ libcamera-vidの呼び出ではオプションで以下を指定している。
 - `__merge_jpeg_to_h264`関数でJPEG画像を再度動画データにまとめる
 - `__convert_h264_to_mp4`関数で動画を確認しやすいようにMP4に変換する。
 
-```py
-    def __separation_h264_to_jpeg( self , movieFileName ):
-        print("[Info] Start the __separation_h264_to_jpeg function.")
-        start_unix_epoch_time = time.time()
-        if shutil.which("ffmpeg") is not None:
-            print("[Info] ffmpeg -i " + movieFileName + " -qscale:v 2 tmp/frame_%08d.jpg")
-            subprocess.run(
-                "ffmpeg -i " + movieFileName +
-                " -qscale:v 2 tmp/frame_%08d.jpg" ,
-                shell          = True ,
-                capture_output = True ,
-                text           = True
-            )
-        else:
-            print("[Warn] apt install -y ffmpeg")
-        end_unix_epoch_time = time.time()
-        total_time = end_unix_epoch_time - start_unix_epoch_time
-        print("[Info] The __separation_h264_to_jpeg function takes " + str(total_time) + " seconds to run.")
-```
-
 `__separation_h264_to_jpeg`関数でH.264動画をJPEGに分割するのに`ffmpeg`コマンドを用いて分割している。
 以下、実際に実行するコマンドとなる。
 
 ```sh
-$ ffmpeg -i ./output/video_UNIXエポックタイム.h264 -qscale:v 2 tmp/frame_%08d.jpg
-```
-
-```py
-    def __merge_jpeg_to_h264( self , movieFileName , framerate ):
-        print("[Info] Start the __merge_jpeg_to_h264 function.")
-        start_unix_epoch_time = time.time()
-        if shutil.which("ffmpeg") is not None:
-            print(
-                "[Info] ffmpeg -framerate " + str(framerate) +
-                " -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y " + movieFileName
-            )
-            subprocess.run(
-                "ffmpeg -framerate " + str(framerate) +
-                " -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y " + movieFileName ,
-                shell          = True ,
-                capture_output = True ,
-                text           = True
-            )
-        else:
-            print("[Warn] Install it with the following command.")
-            print("[Warn] apt install -y ffmpeg")
-        end_unix_epoch_time = time.time()
-        total_time = end_unix_epoch_time - start_unix_epoch_time
-        print("[Info] The __merge_jpeg_to_h264 function takes " + str(total_time) + " seconds to run.")
+$ ffmpeg -i ./出力先ディレクトリ名/日付/movie.h264 -qscale:v 2 tmp/frame_%08d.jpg
 ```
 
 `__merge_jpeg_to_h264`関数でJPEG画像を動画をまとめるのにも`ffmpeg`コマンドを用いてまとめている。
@@ -504,32 +543,17 @@ $ ffmpeg -i ./output/video_UNIXエポックタイム.h264 -qscale:v 2 tmp/frame_
 フレームレート設定は、入力動画ファイルからOpenCVを用いて取得できるため、30.0の箇所は自動で決まる。
 
 ```sh
-$ ffmpeg -framerate 30.0 -i tmp/frame_opencv_%08d.jpg -c:v libx264 -f h264 -y ./output/video_UNIXエポックタイム.h264.sensor.h264
+$ ffmpeg -framerate 30.0 -i tmp/frame_opencv_%08d.jpg   \
+       -c:v libx264 -f h264 -y                          \
+       ./出力先ディレクトリ名/日付/movie.h264.sensor.h264
 ```
 
-```py
-    def __convert_h264_to_mp4( self , movieFileName ):
-        print("[Info] Start the __convert_h264_to_mp4 function.")
-        if shutil.which("MP4Box") is not None:
-            if movieFileName is not None:
-                print("[Info] Convert from H.264 to MP4.")
-                subprocess.run(
-                    "MP4Box -add " + movieFileName + " " + movieFileName + ".mp4" +
-                    " 2>&1 | tee MP4Box_" + movieFileName + ".log" ,
-                    shell=True , capture_output=True , text=True
-                )
-            else:
-                print("[Warn] Please set the video file name.")
-        else:
-            print("[Warn] Install it with the following command.")
-            print("[Warn] apt install -y gpac")   
-```
-
-`__convert_h264_to_mp4`関数でまとめた動画を`MP4Box`コマンドを用いてMP4に変換する。
+`__convert_h264_to_mp4`関数でまとめた動画を`ffmpeg`コマンドを用いてMP4に変換する。
 以下、実際に実行するコマンドとなる。
 
 ```sh
-$ MP4Box -add ./output/video_video_UNIXエポックタイム.h264.sensor.h264 ./output/video_video_UNIXエポックタイム.h264.sensor.h264.mp4
+$ ffmpeg -y -i ./出力先ディレクトリ名/日付/video_video_UNIXエポックタイム.h264.sensor.h264 \
+       -c copy ./出力先ディレクトリ名/日付/movie.h264.sensor.h264.mp4
 ```
 
 ## 5. BME280を用いた高度算出について
@@ -727,38 +751,97 @@ T_c:実測温度[℃]\hspace{0pt}
 
 ### 5-3. Pythonコードの説明
 
-高度算出は以下関数で実施している。
-なお、Tc、RH、Pはそれぞれセンサーデー計測した温度、湿度、気圧となっている。
+I2C通信バス経由でBME280からデータを取得する機能は`BME280Impl`クラスの`__read_sensor`関数で実施している。
 
 ```py
-    def __calculate_altitude( self , Tc , RH , P ):
-        P0  = 1013.25     # 海面上の標準気圧[hPa]
-        L   = 0.0065      # 温度減率[K/m]
-        g   = 9.80665     # 重力加速度[m/s^2]
-        R   = 8.314462618 # 気体定数[J/(mol·K)]
-        M   = 0.0289644   # 空気のモル質量[kg/mol]
-        Pu  = 226.32      # 標準大気における11kmの気圧[hPa]
-        if RH is None or RH <= 0: # 湿度データが無い場合は実測温度を使う
-            Tu = Tc + 273.15 # [K]
-        else:                     # 湿度データがある場合は仮想温度を使う
-            Tu = self.__virtual_temperature( Tc , RH , P )
-        if P > Pu:                # 対流圏 (11km以下)
-            h = (Tu / L) * (1 - (P / P0) ** ((R * L) / (g * M)))
-        else:                     # 成層圏 (11km以上)
-            h = 11000 + ( R * Tu ) / ( g * M ) * math.log( Pu / P )
-        return h
+def __read_sensor(self):
+    self.__bus.write_byte_data( self.__address , 0xF2 , 0x01 )  # Humidity oversampling x1
+    self.__bus.write_byte_data( self.__address , 0xF4 , 0x27 )  # Normal mode, temp/press oversampling x1
+    self.__bus.write_byte_data( self.__address , 0xF5 , 0xA0 )  # Config
+    read24byte    = self.__bus.read_i2c_block_data ( self.__address , 0x88 , 24 )
+    read1Byte0xA1 = self.__bus.read_byte_data      ( self.__address , 0xA1      )
+    read7byte     = self.__bus.read_i2c_block_data ( self.__address , 0xE1 ,  7 )
+    read8byte     = self.__bus.read_i2c_block_data ( self.__address , 0xF7 ,  8 )
+    return read24byte , read1Byte0xA1 , read7byte , read8byte
 ```
 
-以下で湿度を用いた仮想温度を算出している。仮想温度算出には飽和水蒸気圧、水蒸気圧および混合比を算出する必要がある。
+BME280から取得したデータをレジスタデータから物理量データに変換する機能は`I2CAnalyzerImpl`クラスの`__convert_bme280_batch`関数で実施している。
 
 ```py
-    def __virtual_temperature( self , Tc , RH , P ):
-        Tk  = Tc + 273.15  # 気温をKに変換
-        es  = 6.112 * math.exp( (17.67*Tc) / (Tc+243.5) ) # 飽和水蒸気圧(Tetensの式)es[hPa]
-        e   = (RH / 100.0) * es                           # 実際の水蒸気圧e[hPa]
-        r   = ((0.622*e) / (P-e)) / 1000                  # 混合比r[kg/kg]
-        Tkv = Tk * ( 1 + 0.61 * r )                       # 仮想温度[K]
-        return Tkv
+def __convert_bme280_batch(
+        self       ,
+        byteData00 , byteData01 , byteData02 , byteData03 , byteData04 , byteData05 , byteData06 ,
+        byteData07 , byteData08 , byteData09 , byteData10 , byteData11 , byteData12 , byteData13 ,
+        byteData14 , byteData15 , byteData16 , byteData17 , byteData18 , byteData19 , byteData20 ,
+        byteData21 , byteData22 , byteData23 , byteData24 , byteData25 , byteData26 , byteData27 ,
+        byteData28 , byteData29 , byteData30 , byteData31 , byteData32 , byteData33 , byteData34 ,
+        byteData35 , byteData36 , byteData37 , byteData38 , byteData39
+):
+    dig_T1 = byteData01 << 8 | byteData00
+    dig_T2 = (byteData03 << 8 | byteData02) if byteData03 < 128 else (byteData03 << 8 | byteData02) - 65536
+    dig_T3 = (byteData05 << 8 | byteData04) if byteData05 < 128 else (byteData05 << 8 | byteData04) - 65536
+    dig_P1 = byteData07 << 8 | byteData06
+    dig_P2 = ( byteData09 << 8 | byteData08 ) if byteData09 < 128 else ( byteData09 << 8 | byteData08 ) - 65536
+    dig_P3 = ( byteData11 << 8 | byteData10 ) if byteData11 < 128 else ( byteData11 << 8 | byteData10 ) - 65536
+    dig_P4 = ( byteData13 << 8 | byteData12 ) if byteData13 < 128 else ( byteData13 << 8 | byteData12 ) - 65536
+    dig_P5 = ( byteData15 << 8 | byteData14 ) if byteData15 < 128 else ( byteData15 << 8 | byteData14 ) - 65536
+    dig_P6 = ( byteData17 << 8 | byteData16 ) if byteData17 < 128 else ( byteData17 << 8 | byteData16 ) - 65536
+    dig_P7 = ( byteData19 << 8 | byteData18 ) if byteData19 < 128 else ( byteData19 << 8 | byteData18 ) - 65536
+    dig_P8 = ( byteData21 << 8 | byteData20 ) if byteData21 < 128 else ( byteData21 << 8 | byteData20 ) - 65536
+    dig_P9 = ( byteData23 << 8 | byteData22 ) if byteData23 < 128 else ( byteData23 << 8 | byteData22 ) - 65536
+    dig_H1 = byteData24
+    dig_H2 = ( byteData26 << 8 | byteData25 ) if byteData26 < 128 else ( byteData26 << 8 | byteData25 ) - 65536
+    dig_H3 = byteData27
+    dig_H4 = ( byteData28 << 4 ) | ( byteData29 & 0x0F )
+    if dig_H4 & 0x800: dig_H4 -= 4096
+    dig_H5 = ( byteData30 << 4 ) | ( byteData29 >> 4 )
+    if dig_H5 & 0x800: dig_H5 -= 4096
+    dig_H6 = byteData31
+    if dig_H6 > 127: dig_H6 -= 256
+    calib = {
+        'T': ( dig_T1 , dig_T2 , dig_T3 ) ,
+        'P': ( dig_P1 , dig_P2 , dig_P3 , dig_P4 , dig_P5 , dig_P6 , dig_P7 , dig_P8 , dig_P9 ) ,
+        'H': ( dig_H1 , dig_H2 , dig_H3 , dig_H4 , dig_H5 , dig_H6 )
+    }
+    adc_P = ( byteData32 << 12 ) | ( byteData33 << 4 ) | ( byteData34 >> 4 )
+    adc_T = ( byteData35 << 12 ) | ( byteData36 << 4 ) | ( byteData37 >> 4 )
+    adc_H = ( byteData38 <<  8 ) |   byteData39
+    temp, t_fine = self.__compensate_temperature( adc_T , calib['T']          )
+    press        = self.__compensate_pressure   ( adc_P , calib['P'] , t_fine )
+    hum          = self.__compensate_humidity   ( adc_H , calib['H'] , t_fine )
+    alti         = self.__calculate_altitude( temp , hum , press )
+    return temp , press , hum , alti
+```
+
+高度算出は`I2CAnalyzerImpl`クラスの``__calculate_altitude`および`__virtual_temperature`関数で実施している。
+なお、Tc、RH、Pはそれぞれセンサーデー計測した温度、湿度、気圧となっている。
+`__virtual_temperature`関数で湿度を用いた仮想温度を算出している。仮想温度算出には飽和水蒸気圧、水蒸気圧および混合比を算出する必要がある。
+
+```py
+def __calculate_altitude( self , Tc , RH , P ):
+    P0  = 1013.25     # 海面上の標準気圧[hPa]
+    L   = 0.0065      # 温度減率[K/m]
+    g   = 9.80665     # 重力加速度[m/s^2]
+    R   = 8.314462618 # 気体定数[J/(mol·K)]
+    M   = 0.0289644   # 空気のモル質量[kg/mol]
+    Pu  = 226.32      # 標準大気における11kmの気圧[hPa]
+    if RH is None or RH <= 0: # 湿度データが無い場合は実測温度を使う
+        Tu = Tc + 273.15 # [K]
+    else:                     # 湿度データがある場合は仮想温度を使う
+        Tu = self.__virtual_temperature( Tc , RH , P )
+    if P > Pu:                # 対流圏 (11km以下)
+        h = (Tu / L) * (1 - (P / P0) ** ((R * L) / (g * M)))
+    else:                     # 成層圏 (11km以上)
+        h = 11000 + ( R * Tu ) / ( g * M ) * math.log( Pu / P )
+    return h
+##############################################################################
+def __virtual_temperature( self , Tc , RH , P ):
+    Tk  = Tc + 273.15  # 気温をKに変換
+    es  = 6.112 * math.exp( (17.67*Tc) / (Tc+243.5) ) # 飽和水蒸気圧(Tetensの式)es[hPa]
+    e   = (RH / 100.0) * es                           # 実際の水蒸気圧e[hPa]
+    r   = ((0.622*e) / (P-e)) / 1000                  # 混合比r[kg/kg]
+    Tkv = Tk * ( 1 + 0.61 * r )                       # 仮想温度[K]
+    return Tkv
 ```
 
 ## 6. MPU6050を用いた加速度および角速度の取得について
@@ -774,83 +857,46 @@ MPU6050で計測可能なデータは以下である。
 
 ### 6-2. Pythonコードの説明
 
-センサーデータの取得はMPU6050Implクラスで実施している。
-以下がセンサーからデータを取得する関数である。
-`__read_sensor`関数では、I2C通信バス上デバイスアドレスのアドレスを指定しデータを取得する。
-MPU6050では、デバイス内部で加速度3種、角速度3種および温度と複数のデータをレジスタから読み取る。
+I2C通信バス経由でMPU6050からデータを取得する機能は`MPU6050Impl`クラスの`__read_sensor`関数で実施している。
 
 ```py
-    def __read_sensor( self ):
-        PWR_MGMT_1a  = 0x6B
-        ACCEL_XOUT_H = 0x3B
-        ACCEL_YOUT_H = 0x3D
-        ACCEL_ZOUT_H = 0x3F
-        GYRO_XOUT_H  = 0x43
-        GYRO_YOUT_H  = 0x45
-        GYRO_ZOUT_H  = 0x47
-        TEMP_OUT_H   = 0x41
-        self.__bus.write_byte_data( self.__address , PWR_MGMT_1a , 0 )
-        self.__ax          =   self.__read_word( ACCEL_XOUT_H ) / 16384.0
-        self.__ay          =   self.__read_word( ACCEL_YOUT_H ) / 16384.0
-        self.__az          =   self.__read_word( ACCEL_ZOUT_H ) / 16384.0
-        self.__gx          =   self.__read_word( GYRO_XOUT_H  ) / 131.0
-        self.__gy          =   self.__read_word( GYRO_YOUT_H  ) / 131.0
-        self.__gz          =   self.__read_word( GYRO_ZOUT_H  ) / 131.0
-        self.__temperature = ( self.__read_word( TEMP_OUT_H ) + 521 ) / 340.0 + 35.0
+def __read_sensor( self ):
+    try:
+        mpu6050_data = self.__bus.read_i2c_block_data( self.__address , 0x3B , 14 )
+        return mpu6050_data
+    except:
+        return None
 ```
 
-デバイスから取得する際はレジスタのアドレスを指定し、1バイトのデータを2回取得する。
-2回目のデータ取得時はレジスタのアドレスを1加算しずらして別レジスタからデータを取得する。
-よって、I2C通信バスへのアクセスは2回行われる。
-1回目に取得したデータは加速度、角速度または温度のMSBデータである。
-このため`__read_word`関数ではMSBにデータを詰めるため、8ビット(1バイト)分算術左シフトしている。
-(なお、I2C通信バス向けの`read_i2c_block_data`関数で一括取得し、バス負荷を軽減できることもある。)
+MPU6050から取得したデータをレジスタデータから物理量データに変換する機能は`I2CAnalyzerImpl`クラスの`__convert_mpu6050_batch`関数で実施している。
 
 ```py
-    def __read_word( self , addr ):
-        high = self.__bus.read_byte_data( self.__address , addr   )
-        low  = self.__bus.read_byte_data( self.__address , addr+1 )
-        val = (high << 8) + low
-        if( val < 0x8000 ):
-            return val
-        else:
-            return val - 65536
-```
-
-`read_i2c_block_data`関数でセンサーから読み込んだ場合の修正例を以下に示す。
-
-```py
-def read_sensor_data():
-    # 加速度6バイト + 温度2バイト + ジャイロ6バイト = 14バイト一括読み取り
-    data = bus.read_i2c_block_data(MPU6050_ADDR, ACCEL_XOUT_H, 14)
-
-    def convert(h, l):
-        value = (h << 8) | l
-        if value > 32767:
-            value -= 65536
-        return value
-
-    acc_x = convert(data[0], data[1])
-    acc_y = convert(data[2], data[3])
-    acc_z = convert(data[4], data[5])
-    temp  = convert(data[6], data[7])
-    gyro_x = convert(data[8], data[9])
-    gyro_y = convert(data[10], data[11])
-    gyro_z = convert(data[12], data[13])
-
+def __convert_mpu6050_batch(
+        self       ,
+        byteData00 , byteData01 , byteData02 , byteData03 , byteData04 , byteData05 , byteData06 ,
+        byteData07 , byteData08 , byteData09 , byteData10 , byteData11 , byteData12 , byteData13
+):
+    ax          = self.__convert_mpu6050( byteData00 , byteData01 )
+    ay          = self.__convert_mpu6050( byteData02 , byteData03 )
+    az          = self.__convert_mpu6050( byteData04 , byteData05 )
+    temperature = self.__convert_mpu6050( byteData06 , byteData07 )
+    gx          = self.__convert_mpu6050( byteData08 , byteData09 )
+    gy          = self.__convert_mpu6050( byteData10 , byteData11 )
+    gz          = self.__convert_mpu6050( byteData12 , byteData13 )
     return (
-        acc_x / 16384.0, acc_y / 16384.0, acc_z / 16384.0,
-        gyro_x / 131.0, gyro_y / 131.0, gyro_z / 131.0
+        ax/16384.0 , ay/16384.0 , az/16384.0 ,
+        gx/131.0   , gy/131.0   , gz/131.0   ,
+        temperature/340.0+36.53
     )
+##############################################################################
+def __convert_mpu6050( self , msb , lsb ):
+    value = struct.unpack('>h', bytes( [ msb , lsb ]))[0]
+    return value
 ```
 
-## 7. MPU9250を用いた加速度、角速度および地磁気の取得について
+## 7. ICM-20948を用いた加速度、角速度および地磁気の取得について
 
-現在、MPU9250生産終了のためICM20948に以降。
-
-## 8. ICM-20948を用いた加速度、角速度および地磁気の取得について
-
-### 8-1. ICM-20948について
+### 7-1. ICM-20948について
 
 ICM-20948で計測可能なデータは以下である。
 
@@ -859,42 +905,145 @@ ICM-20948で計測可能なデータは以下である。
 | 単位:g(重力加速度)             | 単位:°/S(度毎秒)              | 単位:マイクロテスラ(µT) | 単位:℃(摂氏)    |
 | ±2g、±4g、±8g、±16g           | ±250、±500、±1000、±2000°/s   | ±4900µT               | 計測範囲:-40\~+85℃|
 
-### 8-2. Pythonコードの説明
+### 7-2. Pythonコードの説明
 
-内容作成中
+ICM-20948のキャリブレーションは`CalibrationICM20948Impl`クラスで実施する。
+`doCalibrationICM20948Impl`関数を実行し、キャリブレーション結果のjsonファイルを出力する。
 
 ```py
-    def doIcm20948Impl(self):
-        print("[Info] Start the doIcm20948Impl function.")
+def doCalibrationICM20948Impl( self ):
+    timestamp            = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_timestamp_dir = self.__output_dir + "/" + timestamp
+    os.makedirs( self.__output_dir    , exist_ok=True )
+    os.makedirs( output_timestamp_dir , exist_ok=True )
+    localDriver = qwiic_i2c.getI2CDriver( iBus=self.__i2cbusnum )
+    imu         = qwiic_icm20948.QwiicIcm20948( address=self.__address, i2c_driver=localDriver )
+    if not imu.connected:
+        print("[Error] Could not connect to the ICM-20948.")
+        return
+    imu.begin()
+    samples          = self.__collect_mag_samples(imu)
+    offset           = self.__compute_offsets(samples)
+    centered         = samples - offset
+    soft_iron_matrix = self.__compute_soft_iron_matrix(centered)
+    self.__save_calibration_to_json( offset , soft_iron_matrix , output_timestamp_dir+"/mag_calib.json" )
+```
+
+補正については、後述する[7-3. 地磁気センサーのキャリブレーション](#7-3-地磁気センサーのキャリブレーション)に示すハードアイアン補正およびソフトアイアン補正の補正値を出力する。
+
+ハードアイアン補正は`__compute_offsets`関数、ソフトアイアン補正は`__compute_soft_iron_matrix`関数で実施する。
+
+```py
+def __compute_offsets( self , samples ):
+    mx, my, mz = samples[:, 0], samples[:, 1], samples[:, 2]
+    offset_x   = (mx.max() + mx.min()) / 2
+    offset_y   = (my.max() + my.min()) / 2
+    offset_z   = (mz.max() + mz.min()) / 2
+    return numpy.array([offset_x, offset_y, offset_z])
+#######################################################################
+def __compute_soft_iron_matrix( self , centered ):
+    cov              = numpy.cov(centered.T)
+    eigvals, eigvecs = numpy.linalg.eigh(cov)
+    scale            = numpy.diag(1.0 / numpy.sqrt(eigvals))
+    soft_iron_matrix = eigvecs @ scale @ eigvecs.T
+    return soft_iron_matrix
+```
+
+計測データの取得は`ICM20948Impl`クラスで実施する。
+まず、コンストラクタでI2Cアドレス、I2C bus番号およびcsvのファイルの変数を引数で渡す。
+コンストラクタ内でqwiic_i2cライブラリでI2C bus番号設定をする。
+次にqwiic_icm20948ライブラリでI2CアドレスおよびI2C bus番号設定を渡してICM-20948を使用する準備をする。
+
+```py
+def __init__( self , address , i2cbus , csvFile ):
+    print("[Info] Create an instance of the ICM20948Impl class.")
+    print("[Info] The device address of the ICM-20948 is " + str(hex(address)) )
+    self.__csvFileWriter = csv.writer( csvFile )
+    localDriver          = qwiic_i2c.getI2CDriver( iBus=i2cbus )
+    self.__imu           = qwiic_icm20948.QwiicIcm20948( address=address, i2c_driver=localDriver )
+```
+
+I2C通信バス経由でMPU6050からデータを取得する機能は`doIcm20948Impl`関数で実施している。
+取得後、csvファイルに出力する。
+
+```py
+def doIcm20948Impl(self):
+    print("[Info] Start the doIcm20948Impl function.")
+    self.__imu.begin()
+    while SensorWrapper.running.is_set():
         try:
-            self.__start_unix_epoch_time = time.time()
-            outputThread                 = threading.Thread( target=self.__output_csv )
-            outputThread.start()
-            self.__imu.begin()
-            while True:
-                self.__read_sensor()
-                time.sleep(self.__interval)
+            SensorWrapper.icm20948_cond.acquire()
+            while not SensorWrapper.icm20948_ready:
+                SensorWrapper.icm20948_cond.wait()
+            SensorWrapper.icm20948_cond.release()
+
+            if self.__imu.dataReady():
+                self.__imu.getAgmt()
+                data = [
+                    [
+                        time.time()       ,
+                        self.__imu.axRaw  , self.__imu.ayRaw , self.__imu.azRaw ,
+                        self.__imu.gxRaw  , self.__imu.gyRaw , self.__imu.gzRaw ,
+                        self.__imu.mxRaw  , self.__imu.myRaw , self.__imu.mxRaw ,
+                        self.__imu.tmpRaw
+                    ]
+                ]
+                self.__csvFileWriter.writerows( data )
+                SensorWrapper.icm20948_ready = False
+        except (KeyboardInterrupt , ValueError) as e:
+            SensorWrapper.running.clear()
         except Exception as e:
             print(e)
 ```
 
+ICM-20948から取得したデータをレジスタデータから物理量データに変換する機能は`I2CAnalyzerImpl`クラスの`__convert_icm20948_batch`関数で実施している。
+キャリブレーション値による補正は`__apply_mag_calibration`関数で算出しており、キャリブレーション時に取得したjsonファイルの値はこの際に使用する。
+その後、方位角および0~360°の範囲に正規化する。
+
 ```py
-    def __read_sensor( self ):
-        if self.__imu.dataReady():
-            self.__imu.getAgmt()
-            self.__ax          = self.__imu.axRaw
-            self.__ay          = self.__imu.ayRaw
-            self.__az          = self.__imu.azRaw
-            self.__gx          = self.__imu.gxRaw
-            self.__gy          = self.__imu.gyRaw
-            self.__gz          = self.__imu.gzRaw
-            self.__mx          = self.__imu.mxRaw
-            self.__my          = self.__imu.myRaw
-            self.__mz          = self.__imu.mxRaw
-            self.__temperature = (self.__imu.tmpRaw/333.87)+21
+def __convert_icm20948_batch( self , rawax , raway , rawaz , rawgx , rawgy , rawgz , rawmx , rawmy , rawmz , rawtemp ):
+    # 加速度は16bit生値 -> gに変換 (例:±2g設定で 1g = 16384)
+    # 実際の感度設定に合わせて調整(例:±2g = 16384 LSB/g)
+    ax          = rawax / 16384.0
+    ay          = raway / 16384.0
+    az          = rawaz / 16384.0
+    # ジャイロは16bit生値->dpsに変換(例:±250dps設定で 1dps = 131)
+    # 感度に合わせて調整
+    gx          = rawgx / 131.0
+    gy          = rawgy / 131.0
+    gz          = rawgz / 131.0
+    # 磁気は16bit生値->μTに変換(仕様により要調整)
+    # 例:0.15μT/LSB
+    # mx          = rawmx * 0.15
+    # my          = rawmy * 0.15
+    # mz          = rawmz * 0.15
+    temperature = rawtemp / 333.87 + 21
+    # 方位角
+    if os.path.isfile( self.__calib_json ):
+        f     = open( self.__calib_json , "r" )
+        calib = json.load(f)
+        f.close()
+        offset           = numpy.array(calib["offset"])
+        soft_iron_matrix = numpy.array(calib["soft_iron_matrix"])
+        mx , my , mz = self.__apply_mag_calibration( rawmx , rawmy , rawmz , offset , soft_iron_matrix )
+    else:
+        mx = rawmx
+        my = rawmy
+        mz = rawmz
+    heading_rad = numpy.arctan2( my , mx )
+    heading_deg = numpy.degrees( heading_rad )
+    # 0-360°に正規化
+    heading_deg = ( heading_deg + 360 ) % 360
+    return ax , ay , az , gx , gy , gz , mx , my , mz , temperature , heading_rad , heading_deg
+##############################################################################
+def __apply_mag_calibration( self , mx , my , mz , offset , soft_iron_matrix ):
+    raw       = numpy.array([mx, my, mz])
+    centered  = raw - offset
+    corrected = soft_iron_matrix @ centered
+    return corrected  # numpy array: [corrected_x, corrected_y, corrected_z]
 ```
 
-### 8-2. 地磁気センサーのキャリブレーション
+### 7-3. 地磁気センサーのキャリブレーション
 
 ICM-20948で地磁気を取得する場合、実際の計測(打ち上げ)前にキャリブレーションを行う必要がある。
 これは、算出精度を向上させるのに必要となる。
@@ -911,17 +1060,19 @@ ICM-20948で地磁気を取得する場合、実際の計測(打ち上げ)前に
 
 キャリブレーションで取得した補正値を実際の計測時に読み込み、計測していくことで算出精度が向上する。
 
-#### 8-2-1. ハードアイアン補正
+#### 7-2-1. ハードアイアン補正
 
 ハードアイアン補正は、磁場の定常的なバイアス(オフセット)を補正する。
+これにより、「バイアス除去(センサ内部磁場や固定磁場の除去)」を実施する。
 補正方法は、キャリブレーション中に取得した mx, my, mz の最大値・最小値から中心(オフセット)を計算し、取得したデータからその中心値を引く。
 
-#### 8-2-2. ソフトアイアン補正
+#### 7-2-2. ソフトアイアン補正
 
 ソフトアイアン補正は、センサ周辺にある磁性体や筐体による歪み(楕円形への変形)を補正する。
+これにより「歪み補正(磁場が楕円状に変形する影響を除去)」を実施する。
 補正方法は、計測したmx, my データを楕円にフィットさせて、それを単位円に変換するような線形変換(＝2x2行列)を算出する。算出した補正式(補正行列)を使って、行列演算で補正する。
 
-#### 8-2-3. 補正例
+#### 7-2-3. 補正例
 
 以下に補正例を示す。
 
@@ -931,6 +1082,55 @@ ICM-20948で地磁気を取得する場合、実際の計測(打ち上げ)前に
 <img src="fig/magnetometer_2d.svg" width= "700px" >
 
 <img src="fig/magnetometer_3d.svg" width= "700px" >
+
+### 7-4. 方位角の算出
+
+方位角は以下式で算出する。
+
+```math
+P_0:海面上の標準気圧(1013.25[hPa])\hspace{0pt}
+```
+
+## 8. PowerMonitorを用いた計測データの取得について
+
+### 8-1. PowerMonitorについて
+
+PowerMonitorで取得可能なデータは以下である。
+
+| 項目 | 単位 | 概要 |
+| -- | -- | -- |
+| voltage                 | Vボルト | Raspberry Piのコア電圧 |
+| throttled_status        | ステータス | スロットリング状態 |
+| cpu_utilization         | % | CPU使用率 |
+| memory_usage            | byte | メモリ使用量 |
+| memory_capacity         | byte | メモリ総容量 |
+| memory_usage_percentage | % | メモリ使用率 |
+| cpu_temperature         | ミリ℃、ミリ度摂氏、 1/1000°C | CPU温度 |
+| disk_usage              | byte | ディスク使用量 |
+| total_disk_capacity     | byte | ディスク総容量 |
+| disk_utilization        | % | ディスク使用率 |
+
+### 8-2. Pythonコードの説明
+
+Raspberry Piからデータを取得する機能は`PowerMonitorImpl`クラスで実施している。
+処理としては、Raspbian OS上のファイル読み込み、psutilライブラリおよびLinuxコマンドで実施している。
+
+計測データを変換する機能は`I2CAnalyzerImpl`クラスの`__convert_powermonitor_batch`関数で実施している。
+なお、PowerMonitorはRaspberry Pi本体から取得するため、I2Cセンサー経由では無いが、計測結果csvをマージするため`I2CAnalyzerImpl`クラスで変換処理を実装している。
+
+```py
+def __convert_powermonitor_batch(
+        self ,
+        memory_usage    , memory_capacity     , free_memory_space    ,
+        cpu_temperature ,
+        disk_usage      , total_disk_capacity , available_disk_space
+):
+    return (
+        memory_usage/(1024*1024) , memory_capacity/(1024*1024)   , free_memory_space/(1024*1024)  ,
+        cpu_temperature/1000     ,
+        disk_usage/(1024**3)     , total_disk_capacity/(1024**3) , available_disk_space/(1024**3)
+    )
+```
 
 ## 9. IVK172 G-Mouse USB GPSを用いた計測データの取得について
 
@@ -945,54 +1145,79 @@ IVK172 G-Mouse USB GPSで計測可能なデータは以下である。
 |現在位置の<br>緯度|現在位置の<br>経度|海抜高度|地表速度|北からの<br>進行方向|世界協定時刻|現在の日付<br>(RMC文)|使用中の<br>GPS衛星数|水平方向の<br>精度低下因子|位置が特定されているか<br>(Fix Status)|
 
 ### 9-2. Pythonコードの説明
-以下コードはIVK172 G-Mouse USB GPSからデータを取得する`IVK172GpsImpl`クラスの`__read_sensor`関数である。
+
+以下コードはIVK172 G-Mouse USB GPSからデータを取得する`IVK172GpsImpl`クラスのコンストラクタである。
+コンストラクタでIVK172 G-Mouse USB GPSにアクセスするためのUSBシリアルポートを設定する。
+引数で、USBシリアルポート、csvのファイルの変数およびデータ取得間隔を設定する。
+データ取得間隔は実行時の`--gps_interval`オプションで設定できる。
 
 ```py
-    def __read_sensor( self ):
-        frame = {"GGA": None, "RMC": None, "VTG": None, "GSA": None, "GSV": None}
-        try:
-            while True:
+def __init__( self , port  , csvFile , interval ):
+    print("[Info] Create an instance of the GPSModuleImpl class.")
+    print("[Info] The port for the IVK172 G-Mouse USB GPS is " + str(port) + ".")
+    self.__csvFile       = csvFile
+    self.__csvFileWriter = csv.writer( csvFile )
+    self.__ser           = serial.Serial( port , 9600 , timeout=1 )
+    self.__interval      = interval
+```
 
-                raw = self.__ser.readline().decode('ascii', errors='replace').strip()
-                if not raw.startswith('$'):
-                    continue
+以下コードはデータを取得する`__read_sensor`関数である。
 
-                msg = None
-                try:
-                    rawmsg = pynmea2.parse(raw)
-                    msg = rawmsg
-                except pynmea2.ParseError:
-                    pass
-
-                if msg is None:
-                    continue
-
-                key = msg.sentence_type
-                if key in frame:
-                    frame[key] = msg
-                if all(frame.values()):
-                    gga , rmc , vtg , gsa , gsv = ( frame["GGA"] , frame["RMC"] , frame["VTG"] , frame["GSA"] , frame["GSV"] )
-                    self.__latitude           = gga.latitude
-                    self.__longitude          = gga.longitude
-                    self.__altitude           = gga.altitude
-                    self.__altitude_units     = gga.altitude_units
-                    self.__num_sats           = gga.num_sats
-                    self.__datestamp          = rmc.datestamp
-                    self.__timestamp          = rmc.timestamp
-                    self.__spd_over_grnd      = rmc.spd_over_grnd
-                    self.__true_course        = rmc.true_course
-                    self.__true_track         = vtg.true_track
-                    self.__spd_over_grnd_kmph = vtg.spd_over_grnd_kmph
-                    self.__pdop               = gsa.pdop
-                    self.__hdop               = gsa.hdop
-                    self.__vdo                = gsa.vdop
-                    self.__num_sv_in_view     = gsv.num_sv_in_view
-                    frame = dict.fromkeys(frame, None)
-
-        except KeyboardInterrupt as e:
-            pass # ignore                                                                                                                   
-        finally:
-            self.__ser.close()
+```py
+def __read_sensor( self ):
+    frame = {"GGA": None, "RMC": None, "VTG": None, "GSA": None, "GSV": None}
+    try:
+        while True:
+            raw = self.__ser.readline().decode('ascii', errors='replace').strip()
+            if not raw.startswith('$'):
+                continue
+            msg = None
+            try:
+                rawmsg = pynmea2.parse(raw)
+                msg = rawmsg
+            except pynmea2.ParseError:
+                pass
+            if msg is None:
+                continue
+            key = msg.sentence_type
+            if key in frame:
+                frame[key] = msg
+            if all(frame.values()):
+                gga , rmc , vtg , gsa , gsv = (
+                    frame["GGA"] , frame["RMC"] , frame["VTG"] , frame["GSA"] , frame["GSV"]
+                )
+                latitude            = gga.latitude
+                longitude           = gga.longitude
+                altitude            = gga.altitude
+                altitude_units      = gga.altitude_units
+                num_sats            = gga.num_sats
+                datestamp           = rmc.datestamp
+                timestamp           = rmc.timestamp
+                spd_over_grnd       = rmc.spd_over_grnd
+                true_course         = rmc.true_course
+                true_track          = vtg.true_track
+                spd_over_grnd_kmph  = vtg.spd_over_grnd_kmph
+                pdop                = gsa.pdop
+                hdop                = gsa.hdop
+                vdo                 = gsa.vdop
+                num_sv_in_view      = gsv.num_sv_in_view
+                frame               = dict.fromkeys(frame, None)
+                data = [
+                    [
+                        time.time()    ,
+                        latitude       , longitude          , altitude       ,
+                        altitude_units , num_sats           , datestamp      ,
+                        timestamp      , spd_over_grnd      , true_course    ,
+                        true_track     , spd_over_grnd_kmph , pdop           ,
+                        hdop           , vdo                , num_sv_in_view
+                    ]
+                ]
+                self.__csvFileWriter.writerows( data )
+            time.sleep( self.__interval )
+    except KeyboardInterrupt as e:
+        pass # ignore
+    finally:
+        self.__ser.close()
 ```
 
 上記コードでは以下表の計測データを取得している。
@@ -1015,9 +1240,73 @@ IVK172 G-Mouse USB GPSで計測可能なデータは以下である。
 |gsa.vdop|GSA|垂直DOP|高度方向の精度指標。|
 |gsv.num_sv_in_view|GSV|可視衛星総数|受信機が見えている衛星の個数。|
 
-IVK172 G-Mouse USB GPSから取得したデータは`SensorAnalyzerImpl`クラスの`__generate_map_html`および`__generate_map_kml`関数で解析する。
+GPSデータの解析は`GPSAnalyzerImpl`クラスで実施する。
+解析は`__generate_map_html`関数で地図データを生成し、`__generate_map_kml`関数でGoogleEarth Pro向けKMLファイルを生成する。
 
-`__generate_map_html`関数では`folium`ライブラリを用いてMapデータをHTML形式で出力する。
+`__generate_map_html`関数ではアニメーション無しか有りの地図データを作成できる。
+地図データの生成は`folium`ライブラリで実施し、アニメーションON/OFFは実行時の`--map_animation`オプションで設定できる。
+
+```py
+def __generate_map_html( self ):
+    print("[Info] Start the __generate_map_html function.")
+    dataFrame     = pandas.read_csv( self.__csvFileName )
+    dataFrame     = dataFrame.reset_index()
+    dataFrame["iso_8601_time"] = pandas.to_datetime(dataFrame["end_unix_epoch_time"], unit='s', utc=True).dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+    if self.__animation_en:
+        features = []
+        for _, row in dataFrame.iterrows():
+            features.append(
+                { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ row["longitude"], row["latitude"]], },
+                  "properties": {
+                      "time"      : row["iso_8601_time"]                      ,
+                      "duration"  : 1000                                      ,
+                      "popup"     : f"{row['latitude']} , {row['longitude']}" ,
+                      "icon"      : "circle"                                  ,
+                      "iconstyle" : {
+                          "fillColor"   :"blue" ,
+                          "fillOpacity" : 0.8   ,
+                          "stroke"      :"true" ,
+                          "radius"      : 6
+                      },
+                  }
+                 })
+
+        geojson    = { "type": "FeatureCollection", "features": features, }
+        folium_map = folium.Map(
+            location=[
+                dataFrame["ivk172_latitude"].iloc[0] ,
+                dataFrame["ivk172_latitude"].iloc[0]
+            ],
+            zoom_start=10
+        )
+        TimestampedGeoJson(
+            geojson                  ,
+            period         = "PT2S"  ,
+            duration       = "PT0S"  ,
+            add_last_point = False   ,
+            auto_play      = True    ,
+            loop           = True    ,
+            max_speed      = 1       ,
+        ).add_to(folium_map)
+    else:
+        folium_figure = folium.Figure(width=1500, height=700)
+        folium_map    = folium.Map(
+            location=[
+                dataFrame["ivk172_latitude"] .iloc[0] ,
+                dataFrame["ivk172_longitude"].iloc[0]
+            ] ,
+            zoom_start=4.5
+        ).add_to( folium_figure )
+        folium.PolyLine(
+            dataFrame[["ivk172_latitude", "ivk172_longitude"]].values.tolist(),
+            color="blue",
+            weight=3,
+            opacity=0.8
+        ).add_to(folium_map)
+        # for i in range( dataFrame.count()["latitude"] ):
+        #     folium.Marker( location=[ dataFrame.loc[ i , "latitude" ] , dataFrame.loc[ i , "longitude" ] ] ).add_to( folium_map )
+    folium_map.save( self.__csvFileName + ".html" )
+```
 
 ### 9-3. USBシリアルポートの確認
 
