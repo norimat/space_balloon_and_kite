@@ -1352,7 +1352,7 @@ class I2CAnalyzerImpl:
         if self.__excel_en:
             self.__output_to_excel( "analyse" , self.__input_dir + "/analyse.xlsx" , self.__mergeDataFrame )
         else:
-            self.__mergeDataFrame.to_csv(  basename + "_analyse.csv"  , index=False )
+            self.__mergeDataFrame.to_csv(  self.__input_dir + "/analyse.csv" , index=False )
 
 ########################################################################################
 class GPSAnalyzerImpl:
@@ -1365,7 +1365,7 @@ class GPSAnalyzerImpl:
         print("[Info] Start the __generate_map_html function.")
         dataFrame     = pandas.read_csv( self.__csvFileName )
         dataFrame     = dataFrame.reset_index()
-        dataFrame["iso_8601_time"] = pandas.to_datetime(dataFrame["unix_epoch_time"], unit='s', utc=True).dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+        dataFrame["iso_8601_time"] = pandas.to_datetime(dataFrame["end_unix_epoch_time"], unit='s', utc=True).dt.strftime('%Y-%m-%dT%H:%M:%SZ')
         if self.__animation_en:
             features = []
             for _, row in dataFrame.iterrows():
@@ -1386,7 +1386,13 @@ class GPSAnalyzerImpl:
                      })
 
             geojson    = { "type": "FeatureCollection", "features": features, }
-            folium_map = folium.Map( location=[dataFrame["latitude"].iloc[0], dataFrame["longitude"].iloc[0]], zoom_start=10 )
+            folium_map = folium.Map(
+                location=[
+                    dataFrame["ivk172_latitude"].iloc[0] ,
+                    dataFrame["ivk172_latitude"].iloc[0]
+                ],
+                zoom_start=10
+            )
             TimestampedGeoJson(
                 geojson                  ,
                 period         = "PT2S"  ,
@@ -1400,13 +1406,13 @@ class GPSAnalyzerImpl:
             folium_figure = folium.Figure(width=1500, height=700)
             folium_map    = folium.Map(
                 location=[
-                    dataFrame["latitude"] .iloc[0] ,
-                    dataFrame["longitude"].iloc[0]
+                    dataFrame["ivk172_latitude"] .iloc[0] ,
+                    dataFrame["ivk172_longitude"].iloc[0]
                 ] ,
                 zoom_start=4.5
             ).add_to( folium_figure )
             folium.PolyLine(
-                dataFrame[["latitude", "longitude"]].values.tolist(),
+                dataFrame[["ivk172_latitude", "ivk172_longitude"]].values.tolist(),
                 color="blue",
                 weight=3,
                 opacity=0.8
@@ -1419,7 +1425,7 @@ class GPSAnalyzerImpl:
         print("[Info] Start the __generate_map_kml function.")
         dataFrame                        = pandas.read_csv( os.path.join(os.getcwd() , self.__csvFileName ) , header=0 )
         dataFrame                        = dataFrame.reset_index()
-        tuple_B                          = [tuple(x) for x in dataFrame[['longitude','latitude','altitude']].values]
+        tuple_B                          = [tuple(x) for x in dataFrame[['ivk172_longitude','ivk172_latitude','ivk172_altitude']].values]
         kml                              = simplekml.Kml(open=1)
         linestring                       = kml.newlinestring(name="A Sloped Line")
         linestring.coords                = tuple_B
