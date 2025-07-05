@@ -323,11 +323,42 @@ ICM-20948キャリブレーションモードでは以下を取得する。
 - ソフトアイアン補正値
 
 補正方法は[7-3. 地磁気センサーのキャリブレーション](#7-3-地磁気センサーのキャリブレーション)に説明を記載している。
+jsonファイルの内容は、
+- offsetは上から順にハードアイアン補正のx、y、zの補正値
+- soft_iron_matrixは上から順にソフトアイアン補正の補正行列x、y、z
+- accel_rangeは加速度レンジの値
+- gyro_rangeは角速度レンジの値
+となっている。
 
 以下に補正値の出力jsonファイルを示す。
 
-```sh
-hoge
+```json
+{
+    "offset": [
+        152.5,
+        -106.0,
+        222.0
+    ],
+    "soft_iron_matrix": [
+        [
+            0.013894771286452817,
+            0.00015007502436521568,
+            0.003798217783241616
+        ],
+        [
+            0.00015007502436521574,
+            0.011795454252510742,
+            0.0008783428149767477
+        ],
+        [
+            0.003798217783241617,
+            0.0008783428149767475,
+            0.038231411170073996
+        ]
+    ],
+    "accel_range": 2,
+    "gyro_range": 250
+}
 ```
 
 この補正値を読み込み、取得した計測データに反映する。
@@ -1003,10 +1034,10 @@ ICM-20948から取得したデータをレジスタデータから物理量デ�
 ```py
 def __convert_icm20948_batch( self , rawax , raway , rawaz , rawgx , rawgy , rawgz , rawmx , rawmy , rawmz , rawtemp ):
     # 加速度は16bit生値 -> gに変換 (例:±2g設定で 1g = 16384)
-    # 実際の感度設定に合わせて調整(例:±2g = 16384 LSB/g)
-    ax          = rawax / 16384.0
-    ay          = raway / 16384.0
-    az          = rawaz / 16384.0
+    # 実際の感度設定に合わせて調整(例:±2g = 32768.0 LSB/g)
+    ax          = rawax / 32768.0
+    ay          = raway / 32768.0
+    az          = rawaz / 32768.0
     # ジャイロは16bit生値->dpsに変換(例:±250dps設定で 1dps = 131)
     # 感度に合わせて調整
     gx          = rawgx / 131.0
@@ -1083,13 +1114,37 @@ ICM-20948で地磁気を取得する場合、実際の計測(打ち上げ)前に
 
 <img src="fig/magnetometer_3d.svg" width= "700px" >
 
-### 7-4. 方位角の算出
+### 7-4. 地磁気データを用いた方位角の算出
 
-方位角は以下式で算出する。
+ラジアンでの方位角は以下式で算出する。
 
 ```math
-P_0:海面上の標準気圧(1013.25[hPa])\hspace{0pt}
+\theta_{rad}=arctan2(m_y , m_x )\hspace{0pt}
 ```
+
+```math
+m_x:補正済みの地磁気X成分
+```
+
+```math
+m_y:補正済みの地磁気Y成分
+```
+
+次に、度数法での方位角について以下式で算出する。
+
+```math
+\theta_{deg}=\left( \frac{180}{\pi} \right)×\theta_{rad}=\left( \frac{180}{\pi} \right)×arctan2(m_y , m_x )\hspace{0pt}
+```
+```math
+if\theta_{deg}<0 ⇒ \theta_{deg}:=\theta_{deg}+360
+```
+
+前提としてセンサを水平に設置している場合の方位角を求める式となる。
+
+### 7-5. 地磁気データおよび加速度データを用いた方位角の算出
+
+
+
 
 ## 8. PowerMonitorを用いた計測データの取得について
 
@@ -1105,7 +1160,7 @@ PowerMonitorで取得可能なデータは以下である。
 | memory_usage            | byte | メモリ使用量 |
 | memory_capacity         | byte | メモリ総容量 |
 | memory_usage_percentage | % | メモリ使用率 |
-| cpu_temperature         | ミリ℃、ミリ度摂氏、 1/1000°C | CPU温度 |
+| cpu_temperature         | ミリ℃、ミリ度摂氏、1/1000°C | CPU温度 |
 | disk_usage              | byte | ディスク使用量 |
 | total_disk_capacity     | byte | ディスク総容量 |
 | disk_utilization        | % | ディスク使用率 |
@@ -1528,6 +1583,7 @@ $ pip install folium
 $ pip install simplekml
 ```
 
+<!--
 FaBo9Axis_MPU9250はpython 2系のコードでprint文がpython 3系で実行できないためコードを編集する。
 まず、pythonコマンドを実行し、エラーが以下ファイルで発生するためエディタで編集する。
 print文を検索し、python 3系の記述に変更する。
@@ -1536,6 +1592,7 @@ print文を検索し、python 3系の記述に変更する。
 $ emacs python_space_balloon/lib/python3.9/site-packages/FaBo9Axis_MPU9250/MPU9250.py
 ```
 ※emacsはviやnanoでも問題ない。
+-->
 
 ### Sambaの設定
 

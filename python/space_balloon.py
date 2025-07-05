@@ -366,10 +366,14 @@ class CalibrationICM20948Impl:
         self.__address    = address
         self.__i2cbusnum  = i2cbusnum
     #######################################################################
-    def __save_calibration_to_json( self , offset , soft_iron_matrix , filename="mag_calibration.json" ):
+    def __save_calibration_to_json(
+            self , offset , soft_iron_matrix , accel_range , gyro_range , filename="mag_calibration.json"
+    ):
         data = {
-            "offset": offset.tolist(),
-            "soft_iron_matrix": soft_iron_matrix.tolist()
+            "offset"           : offset.tolist()           ,
+            "soft_iron_matrix" : soft_iron_matrix.tolist() ,
+            "accel_range"      : accel_range               ,
+            "gyro_range"       : gyro_range
         }
         f = open(filename, "w")
         json.dump(data, f, indent=4)
@@ -398,6 +402,30 @@ class CalibrationICM20948Impl:
         soft_iron_matrix = eigvecs @ scale @ eigvecs.T
         return soft_iron_matrix
     #######################################################################
+    def __read_accel_range( self , imu ):
+        imu.setBank(2)
+        reg_val = imu._i2c.readByte( imu.address , 0x14 )
+        fs_sel  = (reg_val >> 1) & 0x03
+        ranges = {
+            0b00: 2  ,
+            0b01: 4  ,
+            0b10: 8  ,
+            0b11: 16
+        }
+        return ranges.get( fs_sel , 0 )
+    #######################################################################
+    def __read_gyro_range( self , imu ):
+        imu.setBank(2)
+        reg_val = imu._i2c.readByte( imu.address , 0x01 )
+        fs_sel  = (reg_val >> 1) & 0x03
+        ranges = {
+            0b00: 250  ,
+            0b01: 500  ,
+            0b10: 1000 ,
+            0b11: 2000
+        }
+        return ranges.get( fs_sel , 0 )
+    #######################################################################
     def doCalibrationICM20948Impl( self ):
         timestamp            = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         output_timestamp_dir = self.__output_dir + "/" + timestamp
@@ -413,7 +441,9 @@ class CalibrationICM20948Impl:
         offset           = self.__compute_offsets(samples)
         centered         = samples - offset
         soft_iron_matrix = self.__compute_soft_iron_matrix(centered)
-        self.__save_calibration_to_json( offset , soft_iron_matrix , output_timestamp_dir+"/mag_calib.json" )
+        accel_range = self.__read_accel_range(imu)
+        gyro_range  = self.__read_gyro_range(imu)
+        self.__save_calibration_to_json( offset , soft_iron_matrix , accel_range , gyro_range , output_timestamp_dir+"/mag_calib.json" )
     
 ########################################################################
 class PowerMonitorImpl:
@@ -816,7 +846,7 @@ class SensorAnalyzerImpl:
 
     #########################################################################
     def doSensorAnalyzerImpl( self ):
-        print("[Info] Start the doSensorAnalyzerImplImpl function.")
+        print("[Info] Start the doSensorAnalyzerImpl function.")
         try:
             threadList = []
 
@@ -1227,7 +1257,8 @@ class I2CAnalyzerImpl:
                 'icm-20948_mz'          ,
                 'icm-20948_temperature' ,
                 'icm-20948_heading_rad' ,
-                'icm-20948_heading_deg'
+                'icm-20948_heading_deg' ,
+                'icm-20948_crr_heading'
             ]
         ] = self.__mergeDataFrame.apply(
             lambda row: pandas.Series(
@@ -1250,23 +1281,7 @@ class I2CAnalyzerImpl:
         )
     ##############################################################################
     def __convert_icm20948_batch( self , rawax , raway , rawaz , rawgx , rawgy , rawgz , rawmx , rawmy , rawmz , rawtemp ):
-        # 加速度は16bit生値 -> gに変換 (例:±2g設定で 1g = 16384)
-        # 実際の感度設定に合わせて調整(例:±2g = 16384 LSB/g)
-        ax          = rawax / 16384.0
-        ay          = raway / 16384.0
-        az          = rawaz / 16384.0
-        # ジャイロは16bit生値->dpsに変換(例:±250dps設定で 1dps = 131)
-        # 感度に合わせて調整
-        gx          = rawgx / 131.0
-        gy          = rawgy / 131.0
-        gz          = rawgz / 131.0
-        # 磁気は16bit生値->μTに変換(仕様により要調整)
-        # 例:0.15μT/LSB
-        # mx          = rawmx * 0.15
-        # my          = rawmy * 0.15
-        # mz          = rawmz * 0.15
         temperature = rawtemp / 333.87 + 21
-        # 方位角
         if os.path.isfile( self.__calib_json ):
             f     = open( self.__calib_json , "r" )
             calib = json.load(f)
@@ -1274,21 +1289,75 @@ class I2CAnalyzerImpl:
             offset           = numpy.array(calib["offset"])
             soft_iron_matrix = numpy.array(calib["soft_iron_matrix"])
             mx , my , mz = self.__apply_mag_calibration( rawmx , rawmy , rawmz , offset , soft_iron_matrix )
+            accel_range = calib["accel_range"]
+            gyro_range  = calib["gyro_range"]
+            accel_scale = 32768.0
+            if   accel_range == 250:
+                accel_scale = 131.0
+            elif accel_range == 500:
+                accel_scale = 65.5
+            elif accel_range == 1000:
+                accel_scale = 32.8
+            elif accel_range == 2000:
+                accel_scale = 16.4
+            gyro_scale = 131.0
+            if   gyro_range == 250:
+                gyro_scale = 131.0
+            elif gyro_range == 500:
+                gyro_scale = 65.5
+            elif gyro_range == 1000:
+                gyro_scale = 32.8
+            elif gyro_range == 2000:
+                gyro_scale = 16.4
+            ax = rawax / accel_scale
+            ay = raway / accel_scale
+            az = rawaz / accel_scale
+            gx = rawgx / gyro_scale
+            gy = rawgy / gyro_scale
+            gz = rawgz / gyro_scale
         else:
             mx = rawmx
             my = rawmy
             mz = rawmz
+            ax = rawax / 32768.0
+            ay = raway / 32768.0
+            az = rawaz / 32768.0
+            gx = rawgx / 131.0
+            gy = rawgy / 131.0
+            gz = rawgz / 131.0
         heading_rad = numpy.arctan2( my , mx )
         heading_deg = numpy.degrees( heading_rad )
-        # 0-360°に正規化
         heading_deg = ( heading_deg + 360 ) % 360
-        return ax , ay , az , gx , gy , gz , mx , my , mz , temperature , heading_rad , heading_deg
+        crr_heading = self.__calculate_tilt_compensated_heading( ax , ay , az , mx , my , mz )
+        mx = mx * 0.15
+        my = my * 0.15
+        mz = mz * 0.15
+        return ax , ay , az , gx , gy , gz , mx , my , mz , temperature , heading_rad , heading_deg , crr_heading
     ##############################################################################
     def __apply_mag_calibration( self , mx , my , mz , offset , soft_iron_matrix ):
         raw       = numpy.array([mx, my, mz])
         centered  = raw - offset
         corrected = soft_iron_matrix @ centered
         return corrected  # numpy array: [corrected_x, corrected_y, corrected_z]
+    ##################################################################################
+    def __normalize( self , v ):
+        norm = numpy.linalg.norm(v)
+        return v / norm if norm != 0 else v
+    ##############################################################################
+    def __calculate_tilt_compensated_heading( self , ax , ay , az , mx , my , mz ):
+        acc   = self.__normalize(numpy.array([ ax , ay , az ]))
+        pitch = numpy.arcsin( -acc[0] )
+        roll  = numpy.arctan2( acc[1] , acc[2] )
+        mx2   = mx * numpy.cos( pitch ) + mz * numpy.sin( pitch )
+        my2   = (mx * numpy.sin( roll ) * numpy.sin( pitch ) +
+                 my * numpy.cos( roll ) -
+                 mz * numpy.sin( roll ) * numpy.cos( pitch ) )
+        heading_rad = numpy.arctan2( my2 , mx2 )
+        #heading_rad = numpy.arctan2( -my2 , mx2 )
+        heading_deg = numpy.degrees( heading_rad )
+        if heading_deg < 0:
+            heading_deg += 360
+        return heading_deg
     ##################################################################################
     # Power Monitor
     ##################################################################################
