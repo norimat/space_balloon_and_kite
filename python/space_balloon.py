@@ -8,6 +8,7 @@ try:
     import qwiic_i2c
     import serial
     import pynmea2
+    import psutil
 except ImportError:
     print("[Warn] The libraries required for reading sensor data from GPIO or related interfaces have not been imported.")
 
@@ -41,7 +42,6 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from openpyxl.worksheet.table import Table, TableStyleInfo
 import struct
 import json
-import psutil
 
 ########################################################################
 class SensorWrapper:
@@ -929,6 +929,7 @@ class I2CAnalyzerImpl:
         self.__mergeDataFrame   = None
 
     def __merge_csv( self ):
+        print("[Info] Start the __merge_csv function.")
         timestamp_column  = "end_unix_epoch_time"
         base_csv_filename = "movie.csv"
         tolerance_sec     = 100 # 100sec
@@ -991,6 +992,7 @@ class I2CAnalyzerImpl:
 
     #########################################################################
     def __output_to_excel( self , sheetName , fileName , dataFrame ):
+        print("[Info] Start the __output_to_excel function.")
         wb              = openpyxl.Workbook()
         ws              = wb.active
         ws.title        = sheetName
@@ -1030,6 +1032,7 @@ class I2CAnalyzerImpl:
     # BME280
     ##################################################################################
     def __convert_bme280_dataFrame( self ):
+        print("[Info] Start the __convert_bme280_dataFrame function.")
         # センサーレジスタデータを物理量データに変換
         self.__mergeDataFrame[
             [
@@ -1087,35 +1090,35 @@ class I2CAnalyzerImpl:
             byteData28 , byteData29 , byteData30 , byteData31 , byteData32 , byteData33 , byteData34 ,
             byteData35 , byteData36 , byteData37 , byteData38 , byteData39
     ):
-        dig_T1 = byteData01 << 8 | byteData00
-        dig_T2 = (byteData03 << 8 | byteData02) if byteData03 < 128 else (byteData03 << 8 | byteData02) - 65536
-        dig_T3 = (byteData05 << 8 | byteData04) if byteData05 < 128 else (byteData05 << 8 | byteData04) - 65536
-        dig_P1 = byteData07 << 8 | byteData06
-        dig_P2 = ( byteData09 << 8 | byteData08 ) if byteData09 < 128 else ( byteData09 << 8 | byteData08 ) - 65536
-        dig_P3 = ( byteData11 << 8 | byteData10 ) if byteData11 < 128 else ( byteData11 << 8 | byteData10 ) - 65536
-        dig_P4 = ( byteData13 << 8 | byteData12 ) if byteData13 < 128 else ( byteData13 << 8 | byteData12 ) - 65536
-        dig_P5 = ( byteData15 << 8 | byteData14 ) if byteData15 < 128 else ( byteData15 << 8 | byteData14 ) - 65536
-        dig_P6 = ( byteData17 << 8 | byteData16 ) if byteData17 < 128 else ( byteData17 << 8 | byteData16 ) - 65536
-        dig_P7 = ( byteData19 << 8 | byteData18 ) if byteData19 < 128 else ( byteData19 << 8 | byteData18 ) - 65536
-        dig_P8 = ( byteData21 << 8 | byteData20 ) if byteData21 < 128 else ( byteData21 << 8 | byteData20 ) - 65536
-        dig_P9 = ( byteData23 << 8 | byteData22 ) if byteData23 < 128 else ( byteData23 << 8 | byteData22 ) - 65536
-        dig_H1 = byteData24
-        dig_H2 = ( byteData26 << 8 | byteData25 ) if byteData26 < 128 else ( byteData26 << 8 | byteData25 ) - 65536
-        dig_H3 = byteData27
-        dig_H4 = ( byteData28 << 4 ) | ( byteData29 & 0x0F )
+        dig_T1 = int(byteData01) << 8 | int(byteData00)
+        dig_T2 = ( int(byteData03) << 8 | int(byteData02) ) if int(byteData03) < 128 else ( int(byteData03) << 8 | int(byteData02) ) - 65536
+        dig_T3 = ( int(byteData05) << 8 | int(byteData04) ) if int(byteData05) < 128 else ( int(byteData05) << 8 | int(byteData04) ) - 65536
+        dig_P1 = int(byteData07) << 8 | int(byteData06)
+        dig_P2 = ( int(byteData09) << 8 | int(byteData08) ) if int(byteData09) < 128 else ( int(byteData09) << 8 | int(byteData08) ) - 65536
+        dig_P3 = ( int(byteData11) << 8 | int(byteData10) ) if int(byteData11) < 128 else ( int(byteData11) << 8 | int(byteData10) ) - 65536
+        dig_P4 = ( int(byteData13) << 8 | int(byteData12) ) if int(byteData13) < 128 else ( int(byteData13) << 8 | int(byteData12) ) - 65536
+        dig_P5 = ( int(byteData15) << 8 | int(byteData14) ) if int(byteData15) < 128 else ( int(byteData15) << 8 | int(byteData14) ) - 65536
+        dig_P6 = ( int(byteData17) << 8 | int(byteData16) ) if int(byteData17) < 128 else ( int(byteData17) << 8 | int(byteData16) ) - 65536
+        dig_P7 = ( int(byteData19) << 8 | int(byteData18) ) if int(byteData19) < 128 else ( int(byteData19) << 8 | int(byteData18) ) - 65536
+        dig_P8 = ( int(byteData21) << 8 | int(byteData20) ) if int(byteData21) < 128 else ( int(byteData21) << 8 | int(byteData20) ) - 65536
+        dig_P9 = ( int(byteData23) << 8 | int(byteData22) ) if int(byteData23) < 128 else ( int(byteData23) << 8 | int(byteData22) ) - 65536
+        dig_H1 = int(byteData24)
+        dig_H2 = ( int(byteData26) << 8 | int(byteData25) ) if int(byteData26) < 128 else ( int(byteData26) << 8 | int(byteData25) ) - 65536
+        dig_H3 = int(byteData27)
+        dig_H4 = ( int(byteData28) << 4 ) | ( int(byteData29) & 0x0F )
         if dig_H4 & 0x800: dig_H4 -= 4096
-        dig_H5 = ( byteData30 << 4 ) | ( byteData29 >> 4 )
+        dig_H5 = ( int(byteData30) << 4 ) | ( int(byteData29) >> 4 )
         if dig_H5 & 0x800: dig_H5 -= 4096
-        dig_H6 = byteData31
+        dig_H6 = int(byteData31)
         if dig_H6 > 127: dig_H6 -= 256
         calib = {
             'T': ( dig_T1 , dig_T2 , dig_T3 ) ,
             'P': ( dig_P1 , dig_P2 , dig_P3 , dig_P4 , dig_P5 , dig_P6 , dig_P7 , dig_P8 , dig_P9 ) ,
             'H': ( dig_H1 , dig_H2 , dig_H3 , dig_H4 , dig_H5 , dig_H6 )
         }
-        adc_P = ( byteData32 << 12 ) | ( byteData33 << 4 ) | ( byteData34 >> 4 )
-        adc_T = ( byteData35 << 12 ) | ( byteData36 << 4 ) | ( byteData37 >> 4 )
-        adc_H = ( byteData38 <<  8 ) |   byteData39
+        adc_P = ( int(byteData32) << 12 ) | ( int(byteData33) << 4 ) | ( int(byteData34) >> 4 )
+        adc_T = ( int(byteData35) << 12 ) | ( int(byteData36) << 4 ) | ( int(byteData37) >> 4 )
+        adc_H = ( int(byteData38) <<  8 ) |   int(byteData39)
         temp, t_fine = self.__compensate_temperature( adc_T , calib['T']          )
         press        = self.__compensate_pressure   ( adc_P , calib['P'] , t_fine )
         hum          = self.__compensate_humidity   ( adc_H , calib['H'] , t_fine )
@@ -1185,6 +1188,7 @@ class I2CAnalyzerImpl:
     # MPU6050
     ##################################################################################
     def __convert_mpu6050_dataFrame( self ):
+        print("[Info] Start the __convert_mpu6050_dataFrame function.")
         # センサーレジスタデータを物理量データに変換
         self.__mergeDataFrame[
             [
@@ -1243,6 +1247,7 @@ class I2CAnalyzerImpl:
     # ICM-20948
     ##################################################################################
     def __convert_icm20948_dataFrame( self ):
+        print("[Info] Start the __convert_icm20948_dataFrame function.")
         # センサーレジスタデータを物理量データに変換
         self.__mergeDataFrame[
             [
@@ -1362,6 +1367,7 @@ class I2CAnalyzerImpl:
     # Power Monitor
     ##################################################################################
     def __convert_powermonitor_dataFrame( self ):
+        print("[Info] Start the __convert_powermonitor_dataFrame function.")
         # センサーレジスタデータを物理量データに変換
         self.__mergeDataFrame[
             [
@@ -1404,6 +1410,7 @@ class I2CAnalyzerImpl:
         )
     ##################################################################################
     def doI2CAnalyzerImpl(self):
+        print("[Info] Start the doI2CAnalyzerImpl function.")
         self.__merge_csv()
         self.__mergeDataFrame['current_time'] = self.__mergeDataFrame['movie_end_unix_epoch_time'].apply(
             lambda epoch_time_ms :
@@ -1505,6 +1512,7 @@ class GPSAnalyzerImpl:
         kml.save( self.__csvFileName + ".kml" )
 
     def doGPSAnalyzerImpl( self ):
+        print("[Info] Start the doGPSAnalyzerImpl function.")
         self.__generate_map_html()
         self.__generate_map_kml()
 

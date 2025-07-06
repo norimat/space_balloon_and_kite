@@ -13,6 +13,7 @@
 | 2025/06/24 | 「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　Power Monitorの機能を追加したためイネーブルオプションの`--powermonitor`オプションを追加 |
 | 2025/06/29 |  「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　フレーム同期でI2Cセンサーからデータを取得し、出力ディレクトリ構成が変更に伴い、<br>　`--input_dir`オプションでcsvを一括読み込みするように変更<br>　csv読み込みオプションを削除<br>　計測時刻が最も近い時間でマージするため`--tolerance`および`--tolerance_gps`オプション削除<br>　`--altitude`オプションをBME280のcsvが存在する場合必ず実行するようにするため削除 |
 | 2025/07/01 | 「[8-2-1. ハードアイアン補正](#8-2-1-ハードアイアン補正)」および「[8-2-2. ソフトアイアン補正](#8-2-2-ソフトアイアン補正)」を追記  |
+| 2025/07/06 | 「[1-3. 入出力](#1-3-入出力)」について出力にICM-20948キャリブレーション結果を追加<br>「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　--modeにICM-20948キャリブレーションモード:2を追加<br>　`--calib_json`オプションを追加<br>「[1-4-1.センサー取得モード](#1-4-1-センサー取得モード)」について取得するデータをセンサーレジスタデータに変更<br>「[1-4-1-1. 動画取得](#1-4-1-1-動画取得)」について動画取得をpicmera2に変更した内容に修正<br>「[1-4-1-2. BME280計測データ取得](#1-4-1-2-BME280計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-3. MPU6050計測データ取得](#1-4-1-3-MPU6050計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-4. MPU9250計測データ取得](#1-4-1-4-MPU9250計測データ取得)」について削除<br>「[1-4-1-4. ICM-20948計測データ取得](#1-4-1-4-ICM-20948計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-5. IVK172 G-Mouse USB GPS計測データ取得](#1-4-1-5-IVK172 G-Mouse USB GPS計測データ取得)」について<br>　データ更新時間が長いためフレーム同期取得はせず、経度、緯度および高度を優先しないように修正<br>「[1-4-1-6. PowerMonitorデータ取得](#1-4-1-6-PowerMonitorデータ取得)」について追加<br>「[1-4-2.センサーデータ解析モード](#1-4-2-センサーデータ解析モード)」について<br>　ICM-20948の内容追加<br>　GPSデータ追加<br>　PowerMonitorの内容追加<br>「[1-4-2-1. 高度の算出](#1-4-2-1-高度の算出)」について削除<br>「[1-4-2-1. 動画データとセンサーデータの同期](#1-4-2-1-動画データとセンサーデータの同期)」について内容修正<br>「[1-4-2-2. BME280から取得したデータのグラフ作成機能](#1-4-2-2-BME280から取得したデータのグラフ作成機能)」について削除<br>「[1-4-2-3. MPU6050から取得したデータのグラフ作成機能](#1-4-2-3-MPU6050から取得したデータのグラフ作成機能)」について削除<br>「[1-4-2-4. MPU9250から取得したデータのグラフ作成機能](#1-4-2-4-MPU9250から取得したデータのグラフ作成機能)」について削除<br>「[1-4-3.ICM-20948キャリブレーションモード](#1-4-3-ICM-20948キャリブレーションモード)」について追加<br>「[2. 動作環境](#2-動作環境)」についてBulleseyeからBookwarmに修正<br>「[3. 実行方法](#3-実行方法)」について<br>　オプション構成変更<br>　説明修正<br>　*ICM-20948キャリブレーションモード*の説明追加<br>「[4-2. Pythonコードの説明](#4-2-Pythonコードの説明)」について説明とコード修正<br>「[6-2. Pythonコードの説明](#6-2-Pythonコードの説明)」について説明とコード修正<br>「[7. MPU9250を用いた加速度、角速度および地磁気の取得について](#7-MPU9250を用いた加速度、角速度および地磁気の取得について)」について削除<br>「[7. ICM-20948を用いた加速度、角速度および地磁気の取得について](#7-ICM-20948を用いた加速度、角速度および地磁気の取得について)」について修正<br>「[8. PowerMonitorを用いた計測データの取得について](#8-PowerMonitorを用いた計測データの取得について)」について追加<br>「[9. IVK172 G-Mouse USB GPSを用いた計測データの取得について](#9-IVK172 G-Mouse USB GPSを用いた計測データの取得について)」について修正<br>「[付録](#付録)」について<br>　「[Raspberry Pi OSの準備](#Raspberry-Pi-OSの準備)」<br>　Bookwarmを追加<br>　「[Python実行環境準備](#Python実行環境準備)」<br>　MPU9250の記述削除<br>　gpac削除<br> |
 
 ## 1. space_balloon.py概要
 
@@ -980,6 +981,50 @@ def __compute_soft_iron_matrix( self , centered ):
     return soft_iron_matrix
 ```
 
+次に、加速度・角速度のレンジを調べる場合、`__read_accel_range`関数および`__read_gyro_range`関数を用いて取得できる。
+これは、ICM-20948のレジスタから読み込みそれに対応したレンジ設定を解析モード時に使用する。
+対応表を以下に示す。
+
+| `fs_sel` | 加速度レンジ | スケーリング係数 |
+| -------- | ------ | ----------------- |
+| `0b00`   | ±2g    | `32768.0`         |
+| `0b01`   | ±4g    | `8192.0`          |
+| `0b10`   | ±8g    | `4096.0`          |
+| `0b11`   | ±16g   | `2048.0`          |
+
+| `fs_sel` | 角速度レンジ   | スケーリング係数 |
+| -------- | --------- | -------- |
+| `0b00`   | ±250 °/s  | `131.0`  |
+| `0b01`   | ±500 °/s  | `65.5`   |
+| `0b10`   | ±1000 °/s | `32.8`   |
+| `0b11`   | ±2000 °/s | `16.4`   |
+
+```py
+def __read_accel_range( self , imu ):
+    imu.setBank(2)
+    reg_val = imu._i2c.readByte( imu.address , 0x14 )
+    fs_sel  = (reg_val >> 1) & 0x03
+    ranges = {
+        0b00: 2  ,
+        0b01: 4  ,
+        0b10: 8  ,
+        0b11: 16
+    }
+    return ranges.get( fs_sel , 0 )
+#######################################################################
+def __read_gyro_range( self , imu ):
+    imu.setBank(2)
+    reg_val = imu._i2c.readByte( imu.address , 0x01 )
+    fs_sel  = (reg_val >> 1) & 0x03
+    ranges = {
+        0b00: 250  ,
+        0b01: 500  ,
+        0b10: 1000 ,
+        0b11: 2000
+    }
+    return ranges.get( fs_sel , 0 )
+```
+
 計測データの取得は`ICM20948Impl`クラスで実施する。
 まず、コンストラクタでI2Cアドレス、I2C bus番号およびcsvのファイルの変数を引数で渡す。
 コンストラクタ内でqwiic_i2cライブラリでI2C bus番号設定をする。
@@ -1030,26 +1075,11 @@ def doIcm20948Impl(self):
 ICM-20948から取得したデータをレジスタデータから物理量データに変換する機能は`I2CAnalyzerImpl`クラスの`__convert_icm20948_batch`関数で実施している。
 キャリブレーション値による補正は`__apply_mag_calibration`関数で算出しており、キャリブレーション時に取得したjsonファイルの値はこの際に使用する。
 その後、方位角および0~360°の範囲に正規化する。
+`__calculate_tilt_compensated_heading`関数は加速度データを用いて傾き補正付き方位角算出関数となっている。
 
 ```py
 def __convert_icm20948_batch( self , rawax , raway , rawaz , rawgx , rawgy , rawgz , rawmx , rawmy , rawmz , rawtemp ):
-    # 加速度は16bit生値 -> gに変換 (例:±2g設定で 1g = 16384)
-    # 実際の感度設定に合わせて調整(例:±2g = 32768.0 LSB/g)
-    ax          = rawax / 32768.0
-    ay          = raway / 32768.0
-    az          = rawaz / 32768.0
-    # ジャイロは16bit生値->dpsに変換(例:±250dps設定で 1dps = 131)
-    # 感度に合わせて調整
-    gx          = rawgx / 131.0
-    gy          = rawgy / 131.0
-    gz          = rawgz / 131.0
-    # 磁気は16bit生値->μTに変換(仕様により要調整)
-    # 例:0.15μT/LSB
-    # mx          = rawmx * 0.15
-    # my          = rawmy * 0.15
-    # mz          = rawmz * 0.15
     temperature = rawtemp / 333.87 + 21
-    # 方位角
     if os.path.isfile( self.__calib_json ):
         f     = open( self.__calib_json , "r" )
         calib = json.load(f)
@@ -1057,21 +1087,74 @@ def __convert_icm20948_batch( self , rawax , raway , rawaz , rawgx , rawgy , raw
         offset           = numpy.array(calib["offset"])
         soft_iron_matrix = numpy.array(calib["soft_iron_matrix"])
         mx , my , mz = self.__apply_mag_calibration( rawmx , rawmy , rawmz , offset , soft_iron_matrix )
+        accel_range = calib["accel_range"]
+        gyro_range  = calib["gyro_range"]
+        accel_scale = 32768.0
+        if   accel_range == 250:
+            accel_scale = 131.0
+        elif accel_range == 500:
+            accel_scale = 65.5
+        elif accel_range == 1000:
+            accel_scale = 32.8
+        elif accel_range == 2000:
+            accel_scale = 16.4
+        gyro_scale = 131.0
+        if   gyro_range == 250:
+            gyro_scale = 131.0
+        elif gyro_range == 500:
+            gyro_scale = 65.5
+        elif gyro_range == 1000:
+            gyro_scale = 32.8
+        elif gyro_range == 2000:
+            gyro_scale = 16.4
+        ax = rawax / accel_scale
+        ay = raway / accel_scale
+        az = rawaz / accel_scale
+        gx = rawgx / gyro_scale
+        gy = rawgy / gyro_scale
+        gz = rawgz / gyro_scale
     else:
         mx = rawmx
         my = rawmy
         mz = rawmz
+        ax = rawax / 32768.0
+        ay = raway / 32768.0
+        az = rawaz / 32768.0
+        gx = rawgx / 131.0
+        gy = rawgy / 131.0
+        gz = rawgz / 131.0
     heading_rad = numpy.arctan2( my , mx )
     heading_deg = numpy.degrees( heading_rad )
-    # 0-360°に正規化
     heading_deg = ( heading_deg + 360 ) % 360
-    return ax , ay , az , gx , gy , gz , mx , my , mz , temperature , heading_rad , heading_deg
+    crr_heading = self.__calculate_tilt_compensated_heading( ax , ay , az , mx , my , mz )
+    mx = mx * 0.15
+    my = my * 0.15
+    mz = mz * 0.15
+    return ax , ay , az , gx , gy , gz , mx , my , mz , temperature , heading_rad , heading_deg , crr_heading
+```
+
+加速度データを用いて傾き補正付き方位角算出関数`__calculate_tilt_compensated_heading`関数は以下となる。
+[7-5. 地磁気データおよび加速度データを用いた方位角の算出](#7-5-地磁気データおよび加速度データを用いた方位角の算出)に算出式の説明を記載している。
+
+```py
+def __normalize( self , v ):
+    norm = numpy.linalg.norm(v)
+    return v / norm if norm != 0 else v
 ##############################################################################
-def __apply_mag_calibration( self , mx , my , mz , offset , soft_iron_matrix ):
-    raw       = numpy.array([mx, my, mz])
-    centered  = raw - offset
-    corrected = soft_iron_matrix @ centered
-    return corrected  # numpy array: [corrected_x, corrected_y, corrected_z]
+def __calculate_tilt_compensated_heading( self , ax , ay , az , mx , my , mz ):
+    acc   = self.__normalize(numpy.array([ ax , ay , az ]))
+    pitch = numpy.arcsin( -acc[0] )
+    roll  = numpy.arctan2( acc[1] , acc[2] )
+    mx2   = mx * numpy.cos( pitch ) + mz * numpy.sin( pitch )
+    my2   = (mx * numpy.sin( roll ) * numpy.sin( pitch ) +
+             my * numpy.cos( roll ) -
+             mz * numpy.sin( roll ) * numpy.cos( pitch ) )
+    heading_rad = numpy.arctan2( my2 , mx2 )
+    #heading_rad = numpy.arctan2( -my2 , mx2 )
+    heading_deg = numpy.degrees( heading_rad )
+    if heading_deg < 0:
+        heading_deg += 360
+    return heading_deg
 ```
 
 ### 7-3. 地磁気センサーのキャリブレーション
@@ -1119,7 +1202,7 @@ ICM-20948で地磁気を取得する場合、実際の計測(打ち上げ)前に
 ラジアンでの方位角は以下式で算出する。
 
 ```math
-\theta_{rad}=arctan2(m_y , m_x )\hspace{0pt}
+\theta_{rad}=arctan2( m_y , m_x )\hspace{0pt}
 ```
 
 ```math
@@ -1133,18 +1216,121 @@ m_y:補正済みの地磁気Y成分
 次に、度数法での方位角について以下式で算出する。
 
 ```math
-\theta_{deg}=\left( \frac{180}{\pi} \right)×\theta_{rad}=\left( \frac{180}{\pi} \right)×arctan2(m_y , m_x )\hspace{0pt}
+\theta_{deg}=\left( \frac{180}{\pi} \right)⋅\theta_{rad}=\left( \frac{180}{\pi} \right)⋅\arctan2(m_y , m_x )\hspace{0pt}
 ```
 ```math
 if\theta_{deg}<0 ⇒ \theta_{deg}:=\theta_{deg}+360
 ```
 
-前提としてセンサを水平に設置している場合の方位角を求める式となる。
+前提としてセンサーを水平に設置している場合の方位角を求める式となる。
 
 ### 7-5. 地磁気データおよび加速度データを用いた方位角の算出
 
+加速度データを用いたラジアンでの方位角は以下式で算出する。
+これによりセンサーを水平に設置できないときに傾き補正をして方位角を求められる。
 
 
+#### 7-5-1. 傾き補正を適用して算出した方位角
+
+水平面に投影した磁気ベクトルを用いて傾き補正適用の方位角を算出できる。
+
+```math
+\theta_{rad} = \arctan2( m_y^h , m_x^h )\hspace{0pt}
+```
+
+```math
+\theta_{deg}=\left( \frac{180}{\pi} \right)⋅\theta_{rad}\hspace{0pt}
+```
+
+```math
+m_y^h:水平面上の磁気ベクトルY成分
+```
+
+```math
+m_x^h:水平面上の磁気ベクトルX成分
+```
+
+#### 7-5-2. 傾き補正適用の磁気ベクトルを水平面への投影
+
+重力加速度ベクトルを用いて回転行列を作成し、地磁気ベクトルを水平面に投影する。
+水平面上のX、Y成分は以下式で求められる。
+
+```math
+m_x^h = m_x⋅\cos\theta+m_z⋅\sin\theta\hspace{0pt}
+```
+```math
+m_y^h = m_x⋅\sin\phi⋅\sin\theta+m_y⋅\cos\phi-m_z⋅\sin\phi⋅\cos\theta\hspace{0pt}
+```
+```math
+m=\left[\begin{matrix} m_x \\ m_y \\ m_z \end{matrix}\right]
+```
+```math
+\theta:pitch(横軸xを中心に回転する角度)\hspace{0pt}
+```
+```math
+\phi:roll(前後軸yを中心に回転する角度)\hspace{0pt}
+```
+```math
+m:地磁気ベクトル(ハードアイアン・ソフトアイアン補正済み)
+```
+```math
+m_x:x軸の磁気ベクトル\hspace{0pt}
+```
+```math
+m_y:y軸の磁気ベクトル\hspace{0pt}
+```
+```math
+m_z:z軸の磁気ベクトル\hspace{0pt}
+```
+
+#### 7-5-3. 加速度から算出するピットおよびロール
+
+pitchは横軸xを中心に回転する角度、rollは前後軸yを中心に回転する角度である。
+これは加速度から以下式で算出できる。
+
+```math
+pitch=\arctan( -a_x^{norm} )
+```
+
+```math
+roll=\arctan2( a_y^{norm} , a_z^{norm} )
+```
+
+```math
+a_x^{norm}:x軸の単位加速度ベクトル\hspace{0pt}
+```
+
+```math
+a_y^{norm}:y軸の単位加速度ベクトル\hspace{0pt}
+```
+
+```math
+a_z^{norm}:z軸の単位加速度ベクトル\hspace{0pt}
+```
+
+#### 7-5-4. 加速度の単位ベクトル算出
+
+pitchおよびrollを算出するために使用する加速度の単位ベクトルは以下式で算出できる。
+
+```math
+a=\left[\begin{matrix} a_x \\ a_y \\ a_z \end{matrix}\right]
+```
+```math
+\vec{a}_{\text{norm}} = \frac{\vec{a}}{\|\vec{a}\|} = \frac{1}{\sqrt{a_x^2 + a_y^2 + a_z^2}} \cdot \begin{bmatrix} a_x \\ a_y \\ a_z \end{bmatrix}
+```
+<!--
+$\vec{v}_{\text{norm}} = \frac{\vec{v}}{\|\vec{v}\|}$
+-->
+<!--
+$\vec{a}_{\text{norm}} = \frac{1}{\sqrt{a_x^2 + a_y^2 + a_z^2}} \cdot \begin{bmatrix} a_x \\ a_y \\ a_z \end{bmatrix}$
+-->
+
+```math
+a:重力加速度ベクトル
+```
+```math
+\vec{a}_{\text{norm}}:加速度の単位ベクトル
+```
 
 ## 8. PowerMonitorを用いた計測データの取得について
 
