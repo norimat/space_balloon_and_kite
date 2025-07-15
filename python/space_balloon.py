@@ -11,11 +11,25 @@ try:
     import psutil
 except ImportError:
     print("[Warn] The libraries required for reading sensor data from GPIO or related interfaces have not been imported.")
+try:
+    import folium
+    from folium.plugins import TimestampedGeoJson
+    import simplekml
+    import pandas
+    import matplotlib
+    import numpy
+    import cv2
+    import openpyxl
+    from openpyxl.styles import PatternFill , Alignment , Font , Border , Side
+    from openpyxl.utils.dataframe import dataframe_to_rows
+    from openpyxl.utils import get_column_letter
+    from openpyxl.styles import PatternFill, Alignment
+    from openpyxl.utils.dataframe import dataframe_to_rows
+    from openpyxl.worksheet.table import Table, TableStyleInfo
+except ImportError:
+    print("[Warn] The libraries required for analyzing sensor data have not been imported.")
 
 import math
-import folium
-from folium.plugins import TimestampedGeoJson
-import simplekml
 import subprocess
 import time
 import csv
@@ -25,39 +39,32 @@ import argparse
 import threading
 import multiprocessing
 import shutil
-import pandas
-import matplotlib
 import os
 import re
-import numpy
 import datetime
 import glob
-import cv2
-import openpyxl
-from openpyxl.styles import PatternFill , Alignment , Font , Border , Side
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.utils import get_column_letter
-from openpyxl.styles import PatternFill, Alignment
-from openpyxl.utils.dataframe import dataframe_to_rows
-from openpyxl.worksheet.table import Table, TableStyleInfo
 import struct
 import json
+import queue
+import gc
 
 ########################################################################
 class SensorWrapper:
 
-    start_unix_epoch_time = 0.0
-    bme280_cond           = threading.Condition()
-    mpu6050_cond          = threading.Condition()
-    icm20948_cond         = threading.Condition()
-    camera_module_cond    = threading.Condition()
-    powermonitor_cond     = threading.Condition()
-    running               = threading.Event()
-    bme280_ready          = False
-    mpu6050_ready         = False
-    icm20948_ready        = False
-    camera_module_ready   = False
-    powermonitor_ready    = False
+    start_unix_epoch_time   = 0.0
+    garbageCollection_cond  = threading.Condition()
+    bme280_cond             = threading.Condition()
+    mpu6050_cond            = threading.Condition()
+    icm20948_cond           = threading.Condition()
+    camera_module_cond      = threading.Condition()
+    powermonitor_cond       = threading.Condition()
+    running                 = threading.Event()
+    garbageCollection_ready = False
+    bme280_ready            = False
+    mpu6050_ready           = False
+    icm20948_ready          = False
+    camera_module_ready     = False
+    powermonitor_ready      = False
 
     def __init__( self , argv ):
         print("[Info] Create an instance of the SensorWrapper class.")
@@ -81,9 +88,11 @@ class SensorWrapper:
         self.__mpu6050_en            = None
         self.__icm20948_en           = None
         self.__framerate             = None
+        self.__framebuffer           = None
         self.__bitrate               = None
         self.__width                 = None
         self.__height                = None
+        self.__csvbuffer             = None
         self.__gps_port              = None
         self.__bme280_addr           = None
         self.__mpu6050_addr          = None
@@ -97,6 +106,8 @@ class SensorWrapper:
 
     def __handler( self , signum , frame ):
         SensorWrapper.running.clear()
+        self.__picamera2.stop_encoder()
+        self.__picamera2.stop()
         self.__camera_fa       .close()
         self.__bme280_en       and self.__bme280_fa       .close()
         self.__mpu6050_en      and self.__mpu6050_fa      .close()
@@ -117,9 +128,6 @@ class SensorWrapper:
         SensorWrapper.runningpowermonitor_cond .notify()
         shutil.rmtree( './tmp' , ignore_errors=True )
 
-    def __garbage_colloction( self ):
-        pass
-
     def __generate_empty_csvFile( self , csvFileName , data ):
         print("[Info] Create the  " + csvFileName + ".")
         fopen  = open( csvFileName , 'w' , newline='' , encoding='utf-8' )
@@ -128,7 +136,7 @@ class SensorWrapper:
         fopen.close()
 
     def __get_csvFile( self , csvFileName ):
-        fappend = open( csvFileName , 'a' , newline='' , encoding='utf-8' , buffering=65536 )
+        fappend = open( csvFileName , 'a' , newline='' , encoding='utf-8' , buffering=self.__csvbuffer )
         return fappend
 
     def __read_args( self ):
@@ -146,9 +154,11 @@ class SensorWrapper:
         parser.add_argument( '--bme280_i2cbus'         , default=1                           , help="" )
         parser.add_argument( '--mpu6050_i2cbus'        , default=1                           , help="" )
         parser.add_argument( '--framerate'             , default="30"                        , help="" )
+        parser.add_argument( '--framebuffer'           , default="4"                         , help="" )
         parser.add_argument( '--bitrate'               , default="8000000"                   , help="" )
         parser.add_argument( '--width'                 , default="1920"                      , help="" )
         parser.add_argument( '--height'                , default="1080"                      , help="" )
+        parser.add_argument( '--csvbuffer'             , default="512"                       , help="" )
         parser.add_argument( '--gps_port'              , default="/dev/ttyACM0"              , help="" )
         parser.add_argument( '--gps_interval'          , default="1.0"                       , help="" )
         parser.add_argument( '--bme280_addr'           , default="0x76"                      , help="" )
@@ -178,10 +188,12 @@ class SensorWrapper:
             self.__bme280_i2cbus                    = int   ( args.bme280_i2cbus      )
             self.__mpu6050_i2cbus                   = int   ( args.mpu6050_i2cbus     )
             self.__framerate                        = int   ( args.framerate          )
+            self.__framebuffer                      = int   ( args.framebuffer        )
             self.__gps_interval                     = float ( args.gps_interval       )
             self.__bitrate                          = int   ( args.bitrate            )
             self.__width                            = int   ( args.width              )
             self.__height                           = int   ( args.height             )
+            self.__csvbuffer                        = int   ( args.csvbuffer          )
             self.__gps_port                         =         args.gps_port
             self.__bme280_addr                      = int   ( args.bme280_addr   , 16 )
             self.__mpu6050_addr                     = int   ( args.mpu6050_addr  , 16 )
@@ -227,15 +239,32 @@ class SensorWrapper:
         ]
         self.__generate_empty_csvFile( cameraCsvFile , data )
         self.__camera_fa  = self.__get_csvFile( cameraCsvFile )
+
+        #######################################################
+        # Camera Module Setting
+
+       
+        # setting camera configuration
+        self.__picamera2     = Picamera2()
+        # setting H264 encoder
+        encoder = H264Encoder( bitrate=self.__bitrate )
+        framerate_microsec   = int( 1.0/self.__framerate*1_000_000 ) # ex) 30fps = 1/30s = 33333μs
+        config               = self.__picamera2.create_video_configuration(
+            buffer_count = self.__framebuffer                                                              ,
+            main         = { "format"             : "YUV420" , "size" : ( self.__width , self.__height ) } ,
+            controls     = { "FrameDurationLimits": ( framerate_microsec , framerate_microsec ) }
+        )
+        self.__picamera2.configure( config )
+        ####################################################### 
+        
         self.__cameraModuleImpl = CameraModuleImpl(
+            self.__picamera2  ,
+            encoder           ,
             cameraCsvFile     ,
             self.__camera_fa  ,
-            movieFileName     ,
-            self.__framerate  ,
-            self.__bitrate    ,
-            self.__width      ,
-            self.__height
+            movieFileName
         )
+        #self.__garbageCollectionImpl = GarbageColloctionImpl()
         #########################################################################
         if self.__icm20948_en :
             print("[Info] Activate the ICM-20948.")
@@ -333,6 +362,8 @@ class SensorWrapper:
             threadList = []
             try:
                 threadList.append( threading.Thread(                            target=self.__cameraModuleImpl.doCameraModuleImpl ) )
+                #threadList.append( threading.Thread(                            target=self.__garbageCollectionImpl.doGarbageCollectionImpl    ) )
+                
                 self.__gps_en          and threadList.append( threading.Thread( target=self.__gpsModuleImpl   .doGpsModuleImpl    ) )
                 self.__bme280_en       and threadList.append( threading.Thread( target=self.__bme280Impl      .doBME280Impl       ) )
                 self.__mpu6050_en      and threadList.append( threading.Thread( target=self.__mpu6050Impl     .doMPU6050Impl      ) )
@@ -341,7 +372,6 @@ class SensorWrapper:
                 SensorWrapper.running.set()
                 for singleThread in threadList:
                     singleThread.start()
-                self.__garbage_colloction() # GC
                 for singleThread in threadList:
                     singleThread.join()
             except Exception as e:
@@ -444,13 +474,49 @@ class CalibrationICM20948Impl:
         accel_range = self.__read_accel_range(imu)
         gyro_range  = self.__read_gyro_range(imu)
         self.__save_calibration_to_json( offset , soft_iron_matrix , accel_range , gyro_range , output_timestamp_dir+"/mag_calib.json" )
-    
+
+
+########################################################################
+class GarbageColloctionImpl:
+
+    def __init__( self ):
+        print("[Info] Create an instance of the GarbageCollectionImpl class.")
+    #######################################################################
+    def doGarbageCollectionImpl(self):
+        print("[Info] Start the doGarbageCollectionImpl function.")
+        while SensorWrapper.running.is_set():
+            try:
+                SensorWrapper.garbageCollection_cond.acquire()
+                while not SensorWrapper.garbageCollection_ready:
+                    SensorWrapper.garbageCollection_cond.wait()
+                SensorWrapper.garbageCollection_cond.release()
+
+                gc.collect()
+                
+                SensorWrapper.garbageCollection_ready = False
+            except (KeyboardInterrupt , ValueError) as e:
+                SensorWrapper.running.clear()
+            except Exception as e:
+                print(e)
+
 ########################################################################
 class PowerMonitorImpl:
 
+    write_queue = queue.Queue()
+
     def __init__( self , csvFile ):
         print("[Info] Create an instance of the PowerMonitorImpl class.")
+        self.__csvFile       = csvFile
         self.__csvFileWriter = csv.writer( csvFile )
+    #######################################################################
+    def __csv_writer( self , stop_event ):
+        while not stop_event.is_set() or not PowerMonitorImpl.write_queue.empty():
+            try:
+                row = PowerMonitorImpl.write_queue.get( timeout=0.1 )
+                self.__csvFileWriter.writerow( row )
+            except queue.Empty:
+                continue
+        self.__csvFile.flush()
     #######################################################################
     def __get_voltage( self ):
         try:
@@ -510,45 +576,63 @@ class PowerMonitorImpl:
     #######################################################################
     def doPowerMonitorImpl(self):
         print("[Info] Start the doPowerMonitorImpl function.")
-        while SensorWrapper.running.is_set():
-            try:
-                SensorWrapper.powermonitor_cond.acquire()
-                while not SensorWrapper.powermonitor_ready:
-                    SensorWrapper.powermonitor_cond.wait()
-                SensorWrapper.powermonitor_cond.release()
-
-                voltage   = self.__get_voltage()
-                throttled = self.__get_throttled()
-                cpu       = self.__get_cpu_usage()
-                mem       = self.__get_memory_usage()
-                temp      = self.__get_cpu_temperature()
-                disk      = self.__get_disk_usage()
-                data = [
-                    [
+        stop_event    = threading.Event()
+        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
+        writer_thread.start()
+        try:
+            while SensorWrapper.running.is_set():
+                try:
+                    SensorWrapper.powermonitor_cond.acquire()
+                    while not SensorWrapper.powermonitor_ready:
+                        SensorWrapper.powermonitor_cond.wait()
+                    SensorWrapper.powermonitor_cond.release()
+    
+                    voltage   = self.__get_voltage()
+                    throttled = self.__get_throttled()
+                    cpu       = self.__get_cpu_usage()
+                    mem       = self.__get_memory_usage()
+                    temp      = self.__get_cpu_temperature()
+                    disk      = self.__get_disk_usage()                    
+                    data = [
                         time.time()    , voltage         , throttled           ,
                         cpu            ,
                         mem['used_B']  , mem['total_B']  , mem['available_B']  , mem['percent_used'] ,
                         temp           ,
                         disk['used_B'] , disk['total_B'] , disk['free_B']      , disk['percent_used']
                     ]
-                ]
-                self.__csvFileWriter.writerows( data )
-                SensorWrapper.powermonitor_ready = False
-            except (KeyboardInterrupt , ValueError) as e:
-                SensorWrapper.running.clear()
-            except Exception as e:
-                print(e)
+                    PowerMonitorImpl.write_queue.put( data )
+                    #self.__csvFileWriter.writerows( data )
+                    SensorWrapper.powermonitor_ready = False
+                except (KeyboardInterrupt , ValueError) as e:
+                    SensorWrapper.running.clear()
+                except Exception as e:
+                    print(e)
+        finally:
+            stop_event.set()
+            writer_thread.join()
 
 ########################################################################
 class BME280Impl:
 
+    write_queue = queue.Queue()
+
     def __init__( self , bus , address , csvFile ):
         print("[Info] Create an instance of the BME280Impl class.")
         print("[Info] The device address of the BME280 is " + str(hex(address)) )
+        self.__csvFile       = csvFile
         self.__csvFileWriter = csv.writer( csvFile )
         self.__address       = address
         self.__bus           = bus
-
+    #######################################################################
+    def __csv_writer( self , stop_event ):
+        while not stop_event.is_set() or not BME280Impl.write_queue.empty():
+            try:
+                row = BME280Impl.write_queue.get( timeout=0.1 )
+                self.__csvFileWriter.writerow( row )
+            except queue.Empty:
+                continue
+        self.__csvFile.flush()
+    #######################################################################
     def __read_sensor(self):
         self.__bus.write_byte_data( self.__address , 0xF2 , 0x01 )  # Humidity oversampling x1
         self.__bus.write_byte_data( self.__address , 0xF4 , 0x27 )  # Normal mode, temp/press oversampling x1
@@ -558,19 +642,22 @@ class BME280Impl:
         read7byte     = self.__bus.read_i2c_block_data ( self.__address , 0xE1 ,  7 )
         read8byte     = self.__bus.read_i2c_block_data ( self.__address , 0xF7 ,  8 )
         return read24byte , read1Byte0xA1 , read7byte , read8byte
-
+    #######################################################################
     def doBME280Impl(self):
         print("[Info] Start the doBME280Impl function.")
+        stop_event    = threading.Event()
+        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
+        writer_thread.start()
         try:
             while SensorWrapper.running.is_set():
-                SensorWrapper.bme280_cond.acquire()
-                while not SensorWrapper.bme280_ready:
-                    SensorWrapper.bme280_cond.wait()
-                SensorWrapper.bme280_cond.release()
-
-                read24byte , read1Byte0xA1 , read7byte , read8byte = self.__read_sensor()
-                data = [
-                    [
+                try:
+                    SensorWrapper.bme280_cond.acquire()
+                    while not SensorWrapper.bme280_ready:
+                        SensorWrapper.bme280_cond.wait()
+                    SensorWrapper.bme280_cond.release()
+    
+                    read24byte , read1Byte0xA1 , read7byte , read8byte = self.__read_sensor()
+                    data = [
                         time.time()    ,
                         read24byte[ 0] , read24byte[ 1] , read24byte[ 2] , read24byte[ 3] ,
                         read24byte[ 4] , read24byte[ 5] , read24byte[ 6] , read24byte[ 7] ,
@@ -583,45 +670,63 @@ class BME280Impl:
                         read8byte[0]   , read8byte[1]   , read8byte[2]   , read8byte[3]   ,
                         read8byte[4]   , read8byte[5]   , read8byte[6]   , read8byte[7]
                     ]
-                ]
-                self.__csvFileWriter.writerows( data )
-                SensorWrapper.bme280_ready = False
-        except (KeyboardInterrupt , ValueError) as e:
-            SensorWrapper.running.clear()
-        except Exception as e:
-            print(e)
+                    #self.__csvFileWriter.writerows( data )
+                    BME280Impl.write_queue.put( data )
+                    SensorWrapper.bme280_ready = False
+                except (KeyboardInterrupt , ValueError) as e:
+                    SensorWrapper.running.clear()
+                except Exception as e:
+                    print(e)
+        finally:
+            stop_event.set()
+            writer_thread.join()
 
 ########################################################################
 class MPU6050Impl:
 
+    write_queue = queue.Queue()
+
     def __init__( self , bus , address , csvFile ):
         print("[Info] Create an instance of the MPU6050Impl class.")
         print("[Info] The device address of the MPU6050 is " + str(hex(address)) )
+        self.__csvFile       = csvFile
         self.__csvFileWriter = csv.writer( csvFile )
         self.__address       = address
         self.__bus           = bus
         self.__bus.write_byte_data( self.__address , 0x6B , 0 )
-
+    #######################################################################
+    def __csv_writer( self , stop_event ):
+        while not stop_event.is_set() or not MPU6050Impl.write_queue.empty():
+            try:
+                row = MPU6050Impl.write_queue.get( timeout=0.1 )
+                self.__csvFileWriter.writerow( row )
+            except queue.Empty:
+                continue
+        self.__csvFile.flush()
+    #######################################################################    
     def __read_sensor( self ):
         try:
             mpu6050_data = self.__bus.read_i2c_block_data( self.__address , 0x3B , 14 )
             return mpu6050_data
         except:
             return None
-
+    #######################################################################
     def doMPU6050Impl(self):
         print("[Info] Start the doMPU6050Impl function.")
-        while SensorWrapper.running.is_set():
-            try:
-                SensorWrapper.mpu6050_cond.acquire()
-                while not SensorWrapper.mpu6050_ready:
-                    SensorWrapper.mpu6050_cond.wait()
-                SensorWrapper.mpu6050_cond.release()
-
-                mpu6050_data = self.__read_sensor()
-                if mpu6050_data is not None:
-                    data = [
-                        [
+        stop_event    = threading.Event()
+        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
+        writer_thread.start()
+        try:
+            while SensorWrapper.running.is_set():
+                try:
+                    SensorWrapper.mpu6050_cond.acquire()
+                    while not SensorWrapper.mpu6050_ready:
+                        SensorWrapper.mpu6050_cond.wait()
+                    SensorWrapper.mpu6050_cond.release()
+    
+                    mpu6050_data = self.__read_sensor()
+                    if mpu6050_data is not None:
+                        data = [
                             time.time()      ,
                             mpu6050_data[ 0] , mpu6050_data[ 1] , mpu6050_data[ 2] ,
                             mpu6050_data[ 3] , mpu6050_data[ 4] , mpu6050_data[ 5] ,
@@ -629,52 +734,73 @@ class MPU6050Impl:
                             mpu6050_data[ 9] , mpu6050_data[10] , mpu6050_data[11] ,
                             mpu6050_data[12] , mpu6050_data[13]
                         ]
-                    ]
-                    self.__csvFileWriter.writerows( data )
-                SensorWrapper.mpu6050_ready = False
-            except (KeyboardInterrupt , ValueError) as e:
-                SensorWrapper.running.clear()
-            except Exception as e:
-                print(e)
+                        #self.__csvFileWriter.writerows( data )
+                        MPU6050Impl.write_queue.put( data )
+                    SensorWrapper.mpu6050_ready = False
+                except (KeyboardInterrupt , ValueError) as e:
+                    SensorWrapper.running.clear()
+                except Exception as e:
+                    print(e)
+        finally:
+            stop_event.set()
+            writer_thread.join()
 
 ########################################################################
 class ICM20948Impl:
 
+    write_queue = queue.Queue()
+
     def __init__( self , address , i2cbus , csvFile ):
         print("[Info] Create an instance of the ICM20948Impl class.")
         print("[Info] The device address of the ICM-20948 is " + str(hex(address)) )
+        self.__csvFile       = csvFile
         self.__csvFileWriter = csv.writer( csvFile )
         localDriver          = qwiic_i2c.getI2CDriver( iBus=i2cbus )
         self.__imu           = qwiic_icm20948.QwiicIcm20948( address=address, i2c_driver=localDriver )
-
+    #######################################################################
+    def __csv_writer( self , stop_event ):
+        while not stop_event.is_set() or not ICM20948Impl.write_queue.empty():
+            try:
+                row = ICM20948Impl.write_queue.get( timeout=0.1 )
+                self.__csvFileWriter.writerow( row )
+            except queue.Empty:
+                continue
+        self.__csvFile.flush()
+    #######################################################################
     def doIcm20948Impl(self):
         print("[Info] Start the doIcm20948Impl function.")
-        self.__imu.begin()
-        while SensorWrapper.running.is_set():
-            try:
-                SensorWrapper.icm20948_cond.acquire()
-                while not SensorWrapper.icm20948_ready:
-                    SensorWrapper.icm20948_cond.wait()
-                SensorWrapper.icm20948_cond.release()
-
-                if self.__imu.dataReady():
-                    self.__imu.getAgmt()
-                    data = [
-                        [
+        stop_event    = threading.Event()
+        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
+        writer_thread.start()
+        try:
+            self.__imu.begin()
+            while SensorWrapper.running.is_set():
+                try:
+                    SensorWrapper.icm20948_cond.acquire()
+                    while not SensorWrapper.icm20948_ready:
+                        SensorWrapper.icm20948_cond.wait()
+                    SensorWrapper.icm20948_cond.release()
+    
+                    if self.__imu.dataReady():
+                        self.__imu.getAgmt()
+                        data = [
                             time.time()       ,
                             self.__imu.axRaw  , self.__imu.ayRaw , self.__imu.azRaw ,
                             self.__imu.gxRaw  , self.__imu.gyRaw , self.__imu.gzRaw ,
                             self.__imu.mxRaw  , self.__imu.myRaw , self.__imu.mxRaw ,
                             self.__imu.tmpRaw
                         ]
-                    ]
-                    self.__csvFileWriter.writerows( data )
-                    SensorWrapper.icm20948_ready = False
-            except (KeyboardInterrupt , ValueError) as e:
-                SensorWrapper.running.clear()
-            except Exception as e:
-                print(e)
-
+                        #self.__csvFileWriter.writerows( data )
+                        ICM20948Impl.write_queue.put( data )
+                        SensorWrapper.icm20948_ready = False
+                except (KeyboardInterrupt , ValueError) as e:
+                    SensorWrapper.running.clear()
+                except Exception as e:
+                    print(e)
+        finally:
+            stop_event.set()
+            writer_thread.join()        
+                    
 ########################################################################
 class GPSModuleImpl:
 
@@ -685,7 +811,7 @@ class GPSModuleImpl:
         self.__csvFileWriter = csv.writer( csvFile )
         self.__ser           = serial.Serial( port , 9600 , timeout=1 )
         self.__interval      = interval
-
+    #######################################################################
     def __read_sensor( self ):
         frame = {"GGA": None, "RMC": None, "VTG": None, "GSA": None, "GSV": None}
         try:
@@ -740,7 +866,7 @@ class GPSModuleImpl:
             pass # ignore
         finally:
             self.__ser.close()
-
+    #######################################################################
     def doGpsModuleImpl(self):
         print("[Info] Start the doGpsModuleImpl function.")
         try:
@@ -751,41 +877,52 @@ class GPSModuleImpl:
 ########################################################################
 class CameraModuleImpl:
 
-    def __init__( self , csvFileName , csvFile , movieFileName , framerate , bitrate , width , height ):
+    write_queue = queue.Queue()
+
+    def __init__( self , picamera2 , encoder , csvFileName , csvFile , movieFileName ):
         print("[Info] Create an instance of the CameraModuleImpl class.")
-        self.__frame_ready   = threading.Event()
-        self.__frame_count   = 0
-        framerate_microsec   = int(1.0/framerate*1_000_000) # ex) 30fps = 1/30s = 33333μs
-        self.__picamera2     = Picamera2()
-        self.__encoder       = H264Encoder(bitrate=bitrate)
-        config               = self.__picamera2.create_video_configuration(
-            main     = { "format"             : "YUV420" , "size": ( width , height )       } ,
-            controls = { "FrameDurationLimits": ( framerate_microsec , framerate_microsec ) }
-        )
-        self.__picamera2.configure( config )
+        self.__frame_ready             = threading.Event()
+        self.__frame_count             = 0
+        self.__encoder                 = encoder
+        self.__picamera2               = picamera2
         self.__picamera2.post_callback = self.__process_frame
         self.__movieFile               = movieFileName
+        self.__csvFile                 = csvFile
         self.__csvFileWriter           = csv.writer( csvFile )
         self.__end_unix_epoch_time     = None
-
+    #######################################################################
+    def __csv_writer( self , stop_event ):
+        while not stop_event.is_set() or not CameraModuleImpl.write_queue.empty():
+            try:
+                row = CameraModuleImpl.write_queue.get( timeout=0.1 )
+                self.__csvFileWriter.writerow( row )
+            except queue.Empty:
+                continue
+        self.__csvFile.flush()
+    #######################################################################
     def __process_frame( self, request ):
-        SensorWrapper.camera_module_cond   .acquire()
-        SensorWrapper.bme280_cond          .acquire()
-        SensorWrapper.mpu6050_cond         .acquire()
-        SensorWrapper.icm20948_cond        .acquire()
-        SensorWrapper.powermonitor_cond    .acquire()
-        SensorWrapper.camera_module_cond   .notify()
+        SensorWrapper.camera_module_cond    .acquire()
+        SensorWrapper.bme280_cond           .acquire()
+        SensorWrapper.mpu6050_cond          .acquire()
+        SensorWrapper.icm20948_cond         .acquire()
+        SensorWrapper.powermonitor_cond     .acquire()
+        #SensorWrapper.garbageCollection_cond.acquire()
+        SensorWrapper.camera_module_cond    .notify()
         if ((self.__frame_count % 30) == 0) :
             SensorWrapper.bme280_cond      .notify()
-        if ((self.__frame_count % 150) == 0) :
-            SensorWrapper.powermonitor_cond.notify()
+            SensorWrapper.powermonitor_cond.notify()      
+        # if ((self.__frame_count % 9000) == 0) :
+        #     SensorWrapper.garbageCollection_cond.notify()
+    
         SensorWrapper.mpu6050_cond         .notify()
         SensorWrapper.icm20948_cond        .notify()
+        #SensorWrapper.garbageCollection_ready = True
         SensorWrapper.camera_module_ready = True
         SensorWrapper.bme280_ready        = True
         SensorWrapper.mpu6050_ready       = True
         SensorWrapper.icm20948_ready      = True
         SensorWrapper.powermonitor_ready  = True
+        #SensorWrapper.garbageCollection_cond.release()
         SensorWrapper.camera_module_cond   .release()
         SensorWrapper.bme280_cond          .release()
         SensorWrapper.mpu6050_cond         .release()
@@ -793,35 +930,43 @@ class CameraModuleImpl:
         SensorWrapper.powermonitor_cond    .release()
         self.__end_unix_epoch_time = time.time()
         self.__frame_ready.set()
-
+    #######################################################################
     def __output_camera_module_csv( self ):
-        while SensorWrapper.running.is_set():
-            try:
-                SensorWrapper.camera_module_cond.acquire()
-                while not SensorWrapper.camera_module_ready:
-                    SensorWrapper.camera_module_cond.wait()
-                SensorWrapper.camera_module_cond.release()
-
-                data = [
-                    [
+        stop_event    = threading.Event()
+        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
+        writer_thread.start()
+        try:
+            while SensorWrapper.running.is_set():
+                try:
+                    SensorWrapper.camera_module_cond.acquire()
+                    while not SensorWrapper.camera_module_ready:
+                        SensorWrapper.camera_module_cond.wait()
+                    SensorWrapper.camera_module_cond.release()
+    
+                    data = [
                         SensorWrapper.start_unix_epoch_time , self.__end_unix_epoch_time , self.__frame_count
                     ]
-                ]
-                self.__csvFileWriter.writerows( data )
-                self.__frame_count += 1
-                SensorWrapper.camera_module_ready = False
-            except (KeyboardInterrupt , ValueError) as e:
-                 SensorWrapper.running.clear()
-            except Exception as e:
-                print(e)
-
+                    #self.__csvFileWriter.writerows( data )
+                    CameraModuleImpl.write_queue.put( data )
+                    self.__frame_count += 1
+                    SensorWrapper.camera_module_ready = False
+                except (KeyboardInterrupt , ValueError) as e:
+                     SensorWrapper.running.clear()
+                except Exception as e:
+                    print(e)
+        finally:
+            stop_event.set()
+            writer_thread.join()
+    #######################################################################
     def doCameraModuleImpl( self ):
         print("[Info] Start the doCameraModuleImpl function.")
         SensorWrapper.start_unix_epoch_time = time.time()
         cameraThread = threading.Thread( target=self.__output_camera_module_csv )
         cameraThread.start()
+
         self.__picamera2.start()
         self.__picamera2.start_encoder( self.__encoder , output=self.__movieFile )
+
         while SensorWrapper.running.is_set():
             try:
                 if self.__frame_ready.wait(timeout=1.0):
