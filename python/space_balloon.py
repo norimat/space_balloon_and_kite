@@ -78,7 +78,9 @@ class SensorWrapper:
         self.__powermonitor_fa       = None
         self.__gps_fa                = None
         self.__mode                  = None
-        self.__output_dir            = None
+        self.__json_output_dir       = None
+        self.__csv_output_dir        = None
+        self.__movie_output_dir      = None
         self.__icm20948_i2cbus       = None
         self.__bme280_i2cbus         = None
         self.__mpu6050_i2cbus        = None
@@ -144,7 +146,9 @@ class SensorWrapper:
         parser.add_argument( '--mode'       , '-m' , default=0     , required=True       , help="" )
         #############################################################################################
         # Sensor Acquisition Mode Options
-        parser.add_argument( '--output_dir'     , '-o' , default="./"                        , help="" )
+        parser.add_argument( '--json_output_dir'       , default="./"                        , help="" )
+        parser.add_argument( '--csv_output_dir'        , default="./"                        , help="" )
+        parser.add_argument( '--movie_output_dir'      , default="./"                        , help="" )
         parser.add_argument( '--gps'                   , default=False , action='store_true' , help="" )
         parser.add_argument( '--bme280'                , default=False , action='store_true' , help="" )
         parser.add_argument( '--mpu6050'               , default=False , action='store_true' , help="" )
@@ -178,7 +182,9 @@ class SensorWrapper:
             ############################################################
             args                                    = parser.parse_args()
             self.__mode                             = int   ( args.mode               )
-            self.__output_dir                       =         args.output_dir
+            self.__json_output_dir                  =         args.json_output_dir
+            self.__csv_output_dir                   =         args.csv_output_dir
+            self.__movie_output_dir                 =         args.movie_output_dir
             self.__gps_en                           = int   ( args.gps                )
             self.__bme280_en                        = int   ( args.bme280             )
             self.__mpu6050_en                       = int   ( args.mpu6050            )
@@ -211,17 +217,20 @@ class SensorWrapper:
 
     def __setup_sensors( self ):
         print("[Info] Start the __generate_empty_csvFile function.")
-        timestamp            = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_timestamp_dir = self.__output_dir + "/" + timestamp
-        os.makedirs( self.__output_dir    , exist_ok=True )
-        os.makedirs( output_timestamp_dir , exist_ok=True )
-        bme280CsvFile       = output_timestamp_dir + "/bme280.csv"
-        mpu6050CsvFile      = output_timestamp_dir + "/mpu6050.csv"
-        icm20948CsvFile     = output_timestamp_dir + "/icm20948.csv"
-        cameraCsvFile       = output_timestamp_dir + "/movie.csv"
-        gpsCsvFile          = output_timestamp_dir + "/gps.csv"
-        powermonitorCsvFile = output_timestamp_dir + "/powermonitor.csv"
-        movieFileName       = output_timestamp_dir + "/movie.h264"
+        timestamp                  = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        csv_output_timestamp_dir   = self.__csv_output_dir   + "/" + timestamp
+        movie_output_timestamp_dir = self.__movie_output_dir + "/" + timestamp
+        os.makedirs( self.__csv_output_dir      , exist_ok=True )
+        os.makedirs( self.__movie_output_dir    , exist_ok=True )
+        os.makedirs( csv_output_timestamp_dir   , exist_ok=True )
+        os.makedirs( movie_output_timestamp_dir , exist_ok=True )
+        bme280CsvFile       = csv_output_timestamp_dir   + "/bme280.csv"
+        mpu6050CsvFile      = csv_output_timestamp_dir   + "/mpu6050.csv"
+        icm20948CsvFile     = csv_output_timestamp_dir   + "/icm20948.csv"
+        cameraCsvFile       = csv_output_timestamp_dir   + "/movie.csv"
+        gpsCsvFile          = csv_output_timestamp_dir   + "/gps.csv"
+        powermonitorCsvFile = csv_output_timestamp_dir   + "/powermonitor.csv"
+        movieFileName       = movie_output_timestamp_dir + "/movie.h264"
 
         if self.__bme280_i2cbus == self.__mpu6050_i2cbus:
             self.__bme280_bus   = smbus2.SMBus( self.__bme280_i2cbus  )
@@ -384,7 +393,7 @@ class SensorWrapper:
         #######################################################################
         elif self.__mode == 2:
             print("[Info] Start the ICM-20948 calibration mode.")
-            cii = CalibrationICM20948Impl( self.__output_dir , self.__icm20948_addr , self.__icm20948_i2cbus )
+            cii = CalibrationICM20948Impl( self.__json_output_dir , self.__icm20948_addr , self.__icm20948_i2cbus )
             cii.doCalibrationICM20948Impl()
         #######################################################################
 
