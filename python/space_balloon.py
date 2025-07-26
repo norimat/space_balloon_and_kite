@@ -51,7 +51,6 @@ import gc
 ########################################################################
 class SensorWrapper:
 
-    start_unix_epoch_time   = 0.0
     garbageCollection_cond  = threading.Condition()
     bme280_cond             = threading.Condition()
     mpu6050_cond            = threading.Condition()
@@ -65,6 +64,77 @@ class SensorWrapper:
     icm20948_ready          = False
     camera_module_ready     = False
     powermonitor_ready      = False
+
+    # init
+    start_time                     = 0
+    bme280_start_time              = 0
+    bme280_end_time                = 0
+    bme280_byte_0                  = 0
+    bme280_byte_1                  = 0
+    bme280_byte_2                  = 0
+    bme280_byte_3                  = 0
+    bme280_byte_4                  = 0
+    bme280_byte_5                  = 0
+    bme280_byte_6                  = 0
+    bme280_byte_7                  = 0
+    mpu6050_start_time             = 0
+    mpu6050_end_time               = 0
+    mpu6050_byte_0                 = 0
+    mpu6050_byte1                  = 0
+    mpu6050_byte2                  = 0
+    mpu6050_byte3                  = 0
+    mpu6050_byte4                  = 0
+    mpu6050_byte5                  = 0
+    mpu6050_byte6                  = 0
+    mpu6050_byte7                  = 0
+    mpu6050_byte8                  = 0
+    mpu6050_byte9                  = 0
+    mpu6050_byte10                 = 0
+    mpu6050_byte11                 = 0
+    mpu6050_byte12                 = 0
+    mpu6050_byte13                 = 0
+    icm20948_start_time            = 0
+    icm20948_end_time              = 0
+    icm20948_axRaw                 = 0
+    icm20948_ayRaw                 = 0
+    icm20948_azRaw                 = 0
+    icm20948_gxRaw                 = 0
+    icm20948_gyRaw                 = 0
+    icm20948_gzRaw                 = 0
+    icm20948_mxRaw                 = 0
+    icm20948_myRaw                 = 0
+    icm20948_mzRaw                 = 0
+    icm20948_tmpRaw                = 0
+    ivk172_latitude                = 0
+    ivk172_longitude               = 0
+    ivk172_altitude                = 0
+    ivk172_altitude_units          = 0
+    ivk172_num_sats                = 0
+    ivk172_datestamp               = 0
+    ivk172_timestamp               = 0
+    ivk172_spd_over_grnd           = 0
+    ivk172_true_course             = 0
+    ivk172_true_track              = 0
+    ivk172_spd_over_grnd_kmph      = 0
+    ivk172_pdop                    = 0
+    ivk172_hdop                    = 0
+    ivk172_vdo                     = 0
+    ivk172_num_sv_in_view          = 0
+    ivk172_frame                   = 0
+    powermonitor_start_time        = 0
+    powermonitor_end_time          = 0
+    powermonitor_voltage           = 0
+    powermonitor_throttled         = 0
+    powermonitor_cpu               = 0
+    powermonitor_mem_used_B        = 0
+    powermonitor_mem_total_B       = 0
+    powermonitor_mem_available_B   = 0
+    powermonitor_mem_percent_used  = 0
+    powermonitor_temp              = 0
+    powermonitor_disk_used_B       = 0
+    powermonitor_disk_total_B      = 0
+    powermonitor_disk_free_B       = 0
+    powermonitor_disk_percent_used = 0
 
     def __init__( self , argv ):
         print("[Info] Create an instance of the SensorWrapper class.")
@@ -137,8 +207,8 @@ class SensorWrapper:
         writer.writerows( data )
         fopen.close()
 
-    def __get_csvFile( self , csvFileName ):
-        fappend = open( csvFileName , 'a' , newline='' , encoding='utf-8' , buffering=self.__csvbuffer )
+    def __get_csvFile( self , csvFileName , csvbuffer ):
+        fappend = open( csvFileName , 'a' , newline='' , encoding='utf-8' , buffering=csvbuffer )
         return fappend
 
     def __read_args( self ):
@@ -224,12 +294,7 @@ class SensorWrapper:
         os.makedirs( self.__movie_output_dir    , exist_ok=True )
         os.makedirs( csv_output_timestamp_dir   , exist_ok=True )
         os.makedirs( movie_output_timestamp_dir , exist_ok=True )
-        bme280CsvFile       = csv_output_timestamp_dir   + "/bme280.csv"
-        mpu6050CsvFile      = csv_output_timestamp_dir   + "/mpu6050.csv"
-        icm20948CsvFile     = csv_output_timestamp_dir   + "/icm20948.csv"
         cameraCsvFile       = csv_output_timestamp_dir   + "/movie.csv"
-        gpsCsvFile          = csv_output_timestamp_dir   + "/gps.csv"
-        powermonitorCsvFile = csv_output_timestamp_dir   + "/powermonitor.csv"
         movieFileName       = movie_output_timestamp_dir + "/movie.h264"
 
         if self.__bme280_i2cbus == self.__mpu6050_i2cbus:
@@ -241,17 +306,88 @@ class SensorWrapper:
 
         #########################################################################
         print("[Info] Activate the Camera Module.")
+
         data = [
             [
-                'start_epoch_time' , 'end_unix_epoch_time' , 'frame_count'
+                'start_time'                    ,
+                'end_time'                      ,
+                'sensor_timestamp'              ,
+                'frame_count'                   ,
+                'bme280_start_time'             ,
+                'bme280_end_time'               ,
+                'bme280_byte_0'                 ,
+                'bme280_byte_1'                 ,
+                'bme280_byte_2'                 ,
+                'bme280_byte_3'                 ,
+                'bme280_byte_4'                 ,
+                'bme280_byte_5'                 ,
+                'bme280_byte_6'                 ,
+                'bme280_byte_7'                 ,
+                'mpu6050_start_time'            ,
+                'mpu6050_end_time'              ,
+                'mpu6050_byte_0'                ,
+                'mpu6050_byte1'                 ,
+                'mpu6050_byte2'                 ,
+                'mpu6050_byte3'                 ,
+                'mpu6050_byte4'                 ,
+                'mpu6050_byte5'                 ,
+                'mpu6050_byte6'                 ,
+                'mpu6050_byte7'                 ,
+                'mpu6050_byte8'                 ,
+                'mpu6050_byte9'                 ,
+                'mpu6050_byte10'                ,
+                'mpu6050_byte11'                ,
+                'mpu6050_byte12'                ,
+                'mpu6050_byte13'                ,
+                'icm20948_start_time'           ,
+                'icm20948_end_time'             ,
+                'icm20948_axRaw'                ,
+                'icm20948_ayRaw'                ,
+                'icm20948_azRaw'                ,
+                'icm20948_gxRaw'                ,
+                'icm20948_gyRaw'                ,
+                'icm20948_gzRaw'                ,
+                'icm20948_mxRaw'                ,
+                'icm20948_myRaw'                ,
+                'icm20948_mzRaw'                ,
+                'icm20948_tmpRaw'
+                'ivk172_latitude'               ,
+                'ivk172_longitude'              ,
+                'ivk172_altitude'               ,
+                'ivk172_altitude_units'         ,
+                'ivk172_num_sats'               ,
+                'ivk172_datestamp'              ,
+                'ivk172_timestamp'              ,
+                'ivk172_spd_over_grnd'          ,
+                'ivk172_true_course'            ,
+                'ivk172_true_track'             ,
+                'ivk172_spd_over_grnd_kmph'     ,
+                'ivk172_pdop'                   ,
+                'ivk172_hdop'                   ,
+                'ivk172_vdo'                    ,
+                'ivk172_num_sv_in_view'         ,
+                'ivk172_frame'                  ,
+                'powermonitor_start_time'       ,
+                'powermonitor_end_time'         ,
+                'powermonitor_voltage'          ,
+                'powermonitor_throttled'        ,
+                'powermonitor_cpu'              ,
+                'powermonitor_mem_used_B'       ,
+                'powermonitor_mem_total_B'      ,
+                'powermonitor_mem_available_B'  ,
+                'powermonitor_mem_percent_used' ,
+                'powermonitor_temp'             ,
+                'powermonitor_disk_used_B'      ,
+                'powermonitor_disk_total_B'     ,
+                'powermonitor_disk_free_B'      ,
+                'powermonitor_disk_percent_used'
             ]
         ]
         self.__generate_empty_csvFile( cameraCsvFile , data )
-        self.__camera_fa  = self.__get_csvFile( cameraCsvFile )
+        self.__camera_fa  = self.__get_csvFile( cameraCsvFile , self.__csvbuffer )
 
         #######################################################
         # Camera Module Setting
-
        
         # setting camera configuration
         self.__picamera2     = Picamera2()
@@ -277,87 +413,23 @@ class SensorWrapper:
         #########################################################################
         if self.__icm20948_en :
             print("[Info] Activate the ICM-20948.")
-            data = [
-                [
-                    'end_unix_epoch_time'      ,
-                    'icm-20948_rawax'          , 'icm-20948_raway' , 'icm-20948_rawaz' ,
-                    'icm-20948_rawgx'          , 'icm-20948_rawgy' , 'icm-20948_rawgz' ,
-                    'icm-20948_rawmx'          , 'icm-20948_rawmy' , 'icm-20948_rawmz' ,
-                    'icm-20948_rawtemperature' ,
-                ]
-            ]
-            self.__generate_empty_csvFile( icm20948CsvFile , data )
-            self.__icm20948_fa  = self.__get_csvFile( icm20948CsvFile )
-            self.__icm20948Impl = ICM20948Impl( self.__icm20948_addr , self.__icm20948_i2cbus , self.__icm20948_fa )
+            self.__icm20948Impl = ICM20948Impl( self.__icm20948_addr , self.__icm20948_i2cbus )
         #########################################################################
         if self.__bme280_en :
             print("[Info] Activate the BME280.")
-            data = [
-                [
-                    'end_unix_epoch_time' ,
-                    'bme280_byte_00'      , 'bme280_byte_01' , 'bme280_byte_02' , 'bme280_byte_03' ,
-                    'bme280_byte_04'      , 'bme280_byte_05' , 'bme280_byte_06' , 'bme280_byte_07' ,
-                    'bme280_byte_08'      , 'bme280_byte_09' , 'bme280_byte_10' , 'bme280_byte_11' ,
-                    'bme280_byte_12'      , 'bme280_byte_13' , 'bme280_byte_14' , 'bme280_byte_15' ,
-                    'bme280_byte_16'      , 'bme280_byte_17' , 'bme280_byte_18' , 'bme280_byte_19' ,
-                    'bme280_byte_20'      , 'bme280_byte_21' , 'bme280_byte_22' , 'bme280_byte_23' ,
-                    'bme280_byte_24'      , 'bme280_byte_25' , 'bme280_byte_26' , 'bme280_byte_27' ,
-                    'bme280_byte_28'      , 'bme280_byte_29' , 'bme280_byte_30' , 'bme280_byte_31' ,
-                    'bme280_byte_32'      , 'bme280_byte_33' , 'bme280_byte_34' , 'bme280_byte_35' ,
-                    'bme280_byte_36'      , 'bme280_byte_37' , 'bme280_byte_38' , 'bme280_byte_39'
-                ]
-            ]
-            self.__generate_empty_csvFile( bme280CsvFile , data )
-            self.__bme280_fa  = self.__get_csvFile( bme280CsvFile )
-            self.__bme280Impl = BME280Impl( self.__bme280_bus , self.__bme280_addr , self.__bme280_fa )
+            self.__bme280Impl = BME280Impl( self.__bme280_bus , self.__bme280_addr )
         #########################################################################
         if self.__mpu6050_en:
             print("[Info] Activate the MPU6050.")
-            data = [
-                [
-                    'end_unix_epoch_time' ,
-                    'mpu6050_byte_00'     , 'mpu6050_byte_01' , 'mpu6050_byte_02' ,
-                    'mpu6050_byte_03'     , 'mpu6050_byte_04' , 'mpu6050_byte_05' ,
-                    'mpu6050_byte_06'     , 'mpu6050_byte_07' , 'mpu6050_byte_08' ,
-                    'mpu6050_byte_09'     , 'mpu6050_byte_10' , 'mpu6050_byte_11' ,
-                    'mpu6050_byte_12'     , 'mpu6050_byte_13'
-                ]
-            ]
-            self.__generate_empty_csvFile( mpu6050CsvFile , data )
-            self.__mpu6050_fa  = self.__get_csvFile( mpu6050CsvFile )
-            self.__mpu6050Impl = MPU6050Impl( self.__mpu6050_bus , self.__mpu6050_addr , self.__mpu6050_fa )
+            self.__mpu6050Impl = MPU6050Impl( self.__mpu6050_bus , self.__mpu6050_addr )
         #########################################################################
         if self.__gps_en :
             print("[Info] Activate the IVK172 G-Mouse USB GPS.")
-            data = [
-                [
-                    'end_unix_epoch_time'   ,
-                    'ivk172_latitude'       , 'ivk172_longitude'          , 'ivk172_altitude'       ,
-                    'ivk172_altitude_units' , 'ivk172_num_sats'           , 'ivk172_datestam'       ,
-                    'ivk172_timestamp'      , 'ivk172_spd_over_grnd'      , 'ivk172_true_course'    ,
-                    'ivk172_true_track'     , 'ivk172_spd_over_grnd_kmph' , 'ivk172_pdop'           ,
-                    'ivk172_hdop'           , 'ivk172_vdop'               , 'ivk172_num_sv_in_view'
-                ]
-            ]
-            self.__generate_empty_csvFile( gpsCsvFile , data )
-            self.__gps_fa = self.__get_csvFile( gpsCsvFile )
-            self.__gpsModuleImpl = GPSModuleImpl( self.__gps_port , self.__gps_fa , self.__gps_interval )
+            self.__gpsModuleImpl = GPSModuleImpl( self.__gps_port , self.__gps_interval )
         #########################################################################
         if self.__powermonitor_en :
             print("[Info] Activate the PowerMonitor.")
-            data = [
-                [
-                    'end_unix_epoch_time' ,
-                    'voltage'             , 'throttled_status'    ,
-                    'cpu_utilization'     ,
-                    'memory_usage'        , 'memory_capacity'     , 'free_memory_space'    , 'memory_usage_percentage'    ,
-                    'cpu_temperature'     ,
-                    'disk_usage'          , 'total_disk_capacity' , 'available_disk_space' , 'disk_utilization_percentage' 
-                ]
-            ]
-            self.__generate_empty_csvFile( powermonitorCsvFile , data )
-            self.__powermonitor_fa = self.__get_csvFile( powermonitorCsvFile )
-            self.__powermonitorImpl = PowerMonitorImpl( self.__powermonitor_fa )
+            self.__powermonitorImpl = PowerMonitorImpl()
         #########################################################################
 
     def doSensorWrapper(self):
@@ -511,21 +583,8 @@ class GarbageColloctionImpl:
 ########################################################################
 class PowerMonitorImpl:
 
-    write_queue = queue.Queue()
-
-    def __init__( self , csvFile ):
+    def __init__( self ):
         print("[Info] Create an instance of the PowerMonitorImpl class.")
-        self.__csvFile       = csvFile
-        self.__csvFileWriter = csv.writer( csvFile )
-    #######################################################################
-    def __csv_writer( self , stop_event ):
-        while not stop_event.is_set() or not PowerMonitorImpl.write_queue.empty():
-            try:
-                row = PowerMonitorImpl.write_queue.get( timeout=0.1 )
-                self.__csvFileWriter.writerow( row )
-            except queue.Empty:
-                continue
-        self.__csvFile.flush()
     #######################################################################
     def __get_voltage( self ):
         try:
@@ -585,9 +644,6 @@ class PowerMonitorImpl:
     #######################################################################
     def doPowerMonitorImpl(self):
         print("[Info] Start the doPowerMonitorImpl function.")
-        stop_event    = threading.Event()
-        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
-        writer_thread.start()
         try:
             while SensorWrapper.running.is_set():
                 try:
@@ -595,22 +651,30 @@ class PowerMonitorImpl:
                     while not SensorWrapper.powermonitor_ready:
                         SensorWrapper.powermonitor_cond.wait()
                     SensorWrapper.powermonitor_cond.release()
-    
-                    voltage   = self.__get_voltage()
-                    throttled = self.__get_throttled()
-                    cpu       = self.__get_cpu_usage()
-                    mem       = self.__get_memory_usage()
-                    temp      = self.__get_cpu_temperature()
-                    disk      = self.__get_disk_usage()                    
-                    data = [
-                        time.time()    , voltage         , throttled           ,
-                        cpu            ,
-                        mem['used_B']  , mem['total_B']  , mem['available_B']  , mem['percent_used'] ,
-                        temp           ,
-                        disk['used_B'] , disk['total_B'] , disk['free_B']      , disk['percent_used']
-                    ]
-                    PowerMonitorImpl.write_queue.put( data )
-                    #self.__csvFileWriter.writerows( data )
+
+                    start_time = round( time.monotonic() , 6 )
+                    voltage    = self.__get_voltage()
+                    throttled  = self.__get_throttled()
+                    cpu        = self.__get_cpu_usage()
+                    mem        = self.__get_memory_usage()
+                    temp       = self.__get_cpu_temperature()
+                    disk       = self.__get_disk_usage()
+                    
+                    SensorWrapper.powermonitor_start_time        = start_time
+                    SensorWrapper.powermonitor_end_time          = round( time.monotonic() , 6 )
+                    SensorWrapper.powermonitor_voltage           = voltage
+                    SensorWrapper.powermonitor_throttled         = throttled
+                    SensorWrapper.powermonitor_cpu               = cpu
+                    SensorWrapper.powermonitor_mem_used_B        = mem['used_B']
+                    SensorWrapper.powermonitor_mem_total_B       = mem['total_B']
+                    SensorWrapper.powermonitor_mem_available_B   = mem['available_B']
+                    SensorWrapper.powermonitor_mem_percent_used  = mem['percent_used']
+                    SensorWrapper.powermonitor_temp              = temp
+                    SensorWrapper.powermonitor_disk_used_B       = disk['used_B']
+                    SensorWrapper.powermonitor_disk_total_B      = disk['total_B']
+                    SensorWrapper.powermonitor_disk_free_B       = disk['free_B']
+                    SensorWrapper.powermonitor_disk_percent_used = disk['percent_used']
+
                     SensorWrapper.powermonitor_ready = False
                 except (KeyboardInterrupt , ValueError) as e:
                     SensorWrapper.running.clear()
@@ -623,40 +687,34 @@ class PowerMonitorImpl:
 ########################################################################
 class BME280Impl:
 
-    write_queue = queue.Queue()
-
-    def __init__( self , bus , address , csvFile ):
+    def __init__( self , bus , address ):
         print("[Info] Create an instance of the BME280Impl class.")
         print("[Info] The device address of the BME280 is " + str(hex(address)) )
-        self.__csvFile       = csvFile
-        self.__csvFileWriter = csv.writer( csvFile )
         self.__address       = address
         self.__bus           = bus
+        self.__bus.write_byte_data( self.__address , 0xF2 , 0x01 )  # Humidity oversampling x1
+        self.__bus.write_byte_data( self.__address , 0xF4 , 0x27 )  # Normal mode, temp/press oversampling x1
+        self.__bus.write_byte_data( self.__address , 0xF5 , 0xA0 )  # Config
     #######################################################################
     def __csv_writer( self , stop_event ):
         while not stop_event.is_set() or not BME280Impl.write_queue.empty():
             try:
-                row = BME280Impl.write_queue.get( timeout=0.1 )
+                row = BME280Impl.write_queue.get( timeout=1.5 )
                 self.__csvFileWriter.writerow( row )
             except queue.Empty:
                 continue
         self.__csvFile.flush()
     #######################################################################
     def __read_sensor(self):
-        self.__bus.write_byte_data( self.__address , 0xF2 , 0x01 )  # Humidity oversampling x1
-        self.__bus.write_byte_data( self.__address , 0xF4 , 0x27 )  # Normal mode, temp/press oversampling x1
-        self.__bus.write_byte_data( self.__address , 0xF5 , 0xA0 )  # Config
-        read24byte    = self.__bus.read_i2c_block_data ( self.__address , 0x88 , 24 )
-        read1Byte0xA1 = self.__bus.read_byte_data      ( self.__address , 0xA1      )
-        read7byte     = self.__bus.read_i2c_block_data ( self.__address , 0xE1 ,  7 )
-        read8byte     = self.__bus.read_i2c_block_data ( self.__address , 0xF7 ,  8 )
-        return read24byte , read1Byte0xA1 , read7byte , read8byte
+        # first only
+        # read24byte    = self.__bus.read_i2c_block_data ( self.__address , 0x88 , 24 ) # calib
+        # read1Byte0xA1 = self.__bus.read_byte_data      ( self.__address , 0xA1      ) # calib
+        # read7byte     = self.__bus.read_i2c_block_data ( self.__address , 0xE1 ,  7 ) # calib
+        read8byte     = self.__bus.read_i2c_block_data ( self.__address , 0xF7 ,  8 ) # 
+        return read8byte
     #######################################################################
     def doBME280Impl(self):
         print("[Info] Start the doBME280Impl function.")
-        stop_event    = threading.Event()
-        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
-        writer_thread.start()
         try:
             while SensorWrapper.running.is_set():
                 try:
@@ -664,23 +722,21 @@ class BME280Impl:
                     while not SensorWrapper.bme280_ready:
                         SensorWrapper.bme280_cond.wait()
                     SensorWrapper.bme280_cond.release()
-    
-                    read24byte , read1Byte0xA1 , read7byte , read8byte = self.__read_sensor()
-                    data = [
-                        time.time()    ,
-                        read24byte[ 0] , read24byte[ 1] , read24byte[ 2] , read24byte[ 3] ,
-                        read24byte[ 4] , read24byte[ 5] , read24byte[ 6] , read24byte[ 7] ,
-                        read24byte[ 8] , read24byte[ 9] , read24byte[10] , read24byte[11] ,
-                        read24byte[12] , read24byte[13] , read24byte[14] , read24byte[15] ,
-                        read24byte[16] , read24byte[17] , read24byte[18] , read24byte[19] ,
-                        read24byte[20] , read24byte[21] , read24byte[22] , read24byte[23] ,
-                        read1Byte0xA1  , read7byte[0]   , read7byte[1]   , read7byte[2]   ,
-                        read7byte[3]   , read7byte[4]   , read7byte[5]   , read7byte[6]   ,
-                        read8byte[0]   , read8byte[1]   , read8byte[2]   , read8byte[3]   ,
-                        read8byte[4]   , read8byte[5]   , read8byte[6]   , read8byte[7]
-                    ]
-                    #self.__csvFileWriter.writerows( data )
-                    BME280Impl.write_queue.put( data )
+
+                    start_time = round( time.monotonic() , 6 )
+                    read8byte  = self.__read_sensor()
+
+                    SensorWrapper.bme280_start_time = start_time
+                    SensorWrapper.bme280_end_time   = round( time.monotonic() , 6)
+                    SensorWrapper.bme280_byte_0     = read8byte[0]
+                    SensorWrapper.bme280_byte_1     = read8byte[1]
+                    SensorWrapper.bme280_byte_2     = read8byte[2]
+                    SensorWrapper.bme280_byte_3     = read8byte[3]   
+                    SensorWrapper.bme280_byte_4     = read8byte[4]
+                    SensorWrapper.bme280_byte_5     = read8byte[5]
+                    SensorWrapper.bme280_byte_6     = read8byte[6]
+                    SensorWrapper.bme280_byte_7     = read8byte[7]
+                    
                     SensorWrapper.bme280_ready = False
                 except (KeyboardInterrupt , ValueError) as e:
                     SensorWrapper.running.clear()
@@ -693,26 +749,16 @@ class BME280Impl:
 ########################################################################
 class MPU6050Impl:
 
-    write_queue = queue.Queue()
-
-    def __init__( self , bus , address , csvFile ):
+    def __init__( self , bus , address ):
         print("[Info] Create an instance of the MPU6050Impl class.")
         print("[Info] The device address of the MPU6050 is " + str(hex(address)) )
-        self.__csvFile       = csvFile
-        self.__csvFileWriter = csv.writer( csvFile )
         self.__address       = address
         self.__bus           = bus
-        self.__bus.write_byte_data( self.__address , 0x6B , 0 )
+        self.__bus.write_byte_data( self.__address , 0x6B , 0x00 ) # スリープ解除
+        self.__bus.write_byte_data( self.__address , 0x1A , 0x03 ) # DLPF設定
+        self.__bus.write_byte_data( self.__address , 0x1B , 0x00 ) # ジャイロフルスケール
+        self.__bus.write_byte_data( self.__address , 0x1C , 0x00 ) # 加速度フルスケール
     #######################################################################
-    def __csv_writer( self , stop_event ):
-        while not stop_event.is_set() or not MPU6050Impl.write_queue.empty():
-            try:
-                row = MPU6050Impl.write_queue.get( timeout=0.1 )
-                self.__csvFileWriter.writerow( row )
-            except queue.Empty:
-                continue
-        self.__csvFile.flush()
-    #######################################################################    
     def __read_sensor( self ):
         try:
             mpu6050_data = self.__bus.read_i2c_block_data( self.__address , 0x3B , 14 )
@@ -722,9 +768,6 @@ class MPU6050Impl:
     #######################################################################
     def doMPU6050Impl(self):
         print("[Info] Start the doMPU6050Impl function.")
-        stop_event    = threading.Event()
-        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
-        writer_thread.start()
         try:
             while SensorWrapper.running.is_set():
                 try:
@@ -732,19 +775,35 @@ class MPU6050Impl:
                     while not SensorWrapper.mpu6050_ready:
                         SensorWrapper.mpu6050_cond.wait()
                     SensorWrapper.mpu6050_cond.release()
-    
-                    mpu6050_data = self.__read_sensor()
+
+                    start_time = round( time.monotonic() , 6 )
+                    mpu6050_data = None
+                    retry_count  = 0
+                    while ((mpu6050_data is None) or (retry_count==10)):
+                        mpu6050_data = self.__read_sensor()
+                        if mpu6050_data is None:
+                            # retry
+                            time.sleep(0.001)
+                            retry_count += 1
+
                     if mpu6050_data is not None:
-                        data = [
-                            time.time()      ,
-                            mpu6050_data[ 0] , mpu6050_data[ 1] , mpu6050_data[ 2] ,
-                            mpu6050_data[ 3] , mpu6050_data[ 4] , mpu6050_data[ 5] ,
-                            mpu6050_data[ 6] , mpu6050_data[ 7] , mpu6050_data[ 8] ,
-                            mpu6050_data[ 9] , mpu6050_data[10] , mpu6050_data[11] ,
-                            mpu6050_data[12] , mpu6050_data[13]
-                        ]
-                        #self.__csvFileWriter.writerows( data )
-                        MPU6050Impl.write_queue.put( data )
+                        SensorWrapper.mpu6050_start_time = start_time
+                        SensorWrapper.mpu6050_end_time   = round( time.monotonic() , 6 )
+                        SensorWrapper.mpu6050_byte_0     = mpu6050_data[ 0]
+                        SensorWrapper.mpu6050_byte1      = mpu6050_data[ 1]
+                        SensorWrapper.mpu6050_byte2      = mpu6050_data[ 2] 
+                        SensorWrapper.mpu6050_byte3      = mpu6050_data[ 3]
+                        SensorWrapper.mpu6050_byte4      = mpu6050_data[ 4]
+                        SensorWrapper.mpu6050_byte5      = mpu6050_data[ 5] 
+                        SensorWrapper.mpu6050_byte6      = mpu6050_data[ 6]
+                        SensorWrapper.mpu6050_byte7      = mpu6050_data[ 7]
+                        SensorWrapper.mpu6050_byte8      = mpu6050_data[ 8] 
+                        SensorWrapper.mpu6050_byte9      = mpu6050_data[ 9]
+                        SensorWrapper.mpu6050_byte10     = mpu6050_data[10]
+                        SensorWrapper.mpu6050_byte11     = mpu6050_data[11] 
+                        SensorWrapper.mpu6050_byte12     = mpu6050_data[12]
+                        SensorWrapper.mpu6050_byte13     = mpu6050_data[13]
+                        
                     SensorWrapper.mpu6050_ready = False
                 except (KeyboardInterrupt , ValueError) as e:
                     SensorWrapper.running.clear()
@@ -757,30 +816,14 @@ class MPU6050Impl:
 ########################################################################
 class ICM20948Impl:
 
-    write_queue = queue.Queue()
-
-    def __init__( self , address , i2cbus , csvFile ):
+    def __init__( self , address , i2cbus ):
         print("[Info] Create an instance of the ICM20948Impl class.")
         print("[Info] The device address of the ICM-20948 is " + str(hex(address)) )
-        self.__csvFile       = csvFile
-        self.__csvFileWriter = csv.writer( csvFile )
-        localDriver          = qwiic_i2c.getI2CDriver( iBus=i2cbus )
-        self.__imu           = qwiic_icm20948.QwiicIcm20948( address=address, i2c_driver=localDriver )
-    #######################################################################
-    def __csv_writer( self , stop_event ):
-        while not stop_event.is_set() or not ICM20948Impl.write_queue.empty():
-            try:
-                row = ICM20948Impl.write_queue.get( timeout=0.1 )
-                self.__csvFileWriter.writerow( row )
-            except queue.Empty:
-                continue
-        self.__csvFile.flush()
+        localDriver = qwiic_i2c.getI2CDriver( iBus=i2cbus )
+        self.__imu  = qwiic_icm20948.QwiicIcm20948( address=address, i2c_driver=localDriver )
     #######################################################################
     def doIcm20948Impl(self):
         print("[Info] Start the doIcm20948Impl function.")
-        stop_event    = threading.Event()
-        writer_thread = threading.Thread( target=self.__csv_writer , args=( stop_event, ) )
-        writer_thread.start()
         try:
             self.__imu.begin()
             while SensorWrapper.running.is_set():
@@ -789,18 +832,24 @@ class ICM20948Impl:
                     while not SensorWrapper.icm20948_ready:
                         SensorWrapper.icm20948_cond.wait()
                     SensorWrapper.icm20948_cond.release()
-    
+
+                    start_time = round( time.monotonic() , 6 )
                     if self.__imu.dataReady():
                         self.__imu.getAgmt()
-                        data = [
-                            time.time()       ,
-                            self.__imu.axRaw  , self.__imu.ayRaw , self.__imu.azRaw ,
-                            self.__imu.gxRaw  , self.__imu.gyRaw , self.__imu.gzRaw ,
-                            self.__imu.mxRaw  , self.__imu.myRaw , self.__imu.mxRaw ,
-                            self.__imu.tmpRaw
-                        ]
-                        #self.__csvFileWriter.writerows( data )
-                        ICM20948Impl.write_queue.put( data )
+
+                        SensorWrapper.icm20948_start_time = start_time
+                        SensorWrapper.icm20948_end_time   = round( time.monotonic() , 6 )
+                        SensorWrapper.icm20948_axRaw      = self.__imu.axRaw
+                        SensorWrapper.icm20948_ayRaw      = self.__imu.ayRaw
+                        SensorWrapper.icm20948_azRaw      = self.__imu.azRaw 
+                        SensorWrapper.icm20948_gxRaw      = self.__imu.gxRaw
+                        SensorWrapper.icm20948_gyRaw      = self.__imu.gyRaw
+                        SensorWrapper.icm20948_gzRaw      = self.__imu.gzRaw 
+                        SensorWrapper.icm20948_mxRaw      = self.__imu.mxRaw
+                        SensorWrapper.icm20948_myRaw      = self.__imu.myRaw
+                        SensorWrapper.icm20948_mzRaw      = self.__imu.mzRaw 
+                        SensorWrapper.icm20948_tmpRaw     = self.__imu.tmpRaw
+
                         SensorWrapper.icm20948_ready = False
                 except (KeyboardInterrupt , ValueError) as e:
                     SensorWrapper.running.clear()
@@ -813,11 +862,9 @@ class ICM20948Impl:
 ########################################################################
 class GPSModuleImpl:
 
-    def __init__( self , port  , csvFile , interval ):
+    def __init__( self , port , interval ):
         print("[Info] Create an instance of the GPSModuleImpl class.")
         print("[Info] The port for the IVK172 G-Mouse USB GPS is " + str(port) + ".")
-        self.__csvFile       = csvFile
-        self.__csvFileWriter = csv.writer( csvFile )
         self.__ser           = serial.Serial( port , 9600 , timeout=1 )
         self.__interval      = interval
     #######################################################################
@@ -825,6 +872,7 @@ class GPSModuleImpl:
         frame = {"GGA": None, "RMC": None, "VTG": None, "GSA": None, "GSV": None}
         try:
             while True:
+                start_time = round( time.monotonic() , 6 )
                 raw = self.__ser.readline().decode('ascii', errors='replace').strip()
                 if not raw.startswith('$'):
                     continue
@@ -843,33 +891,26 @@ class GPSModuleImpl:
                     gga , rmc , vtg , gsa , gsv = (
                         frame["GGA"] , frame["RMC"] , frame["VTG"] , frame["GSA"] , frame["GSV"]
                     )
-                    latitude            = gga.latitude
-                    longitude           = gga.longitude
-                    altitude            = gga.altitude
-                    altitude_units      = gga.altitude_units
-                    num_sats            = gga.num_sats
-                    datestamp           = rmc.datestamp
-                    timestamp           = rmc.timestamp
-                    spd_over_grnd       = rmc.spd_over_grnd
-                    true_course         = rmc.true_course
-                    true_track          = vtg.true_track
-                    spd_over_grnd_kmph  = vtg.spd_over_grnd_kmph
-                    pdop                = gsa.pdop
-                    hdop                = gsa.hdop
-                    vdo                 = gsa.vdop
-                    num_sv_in_view      = gsv.num_sv_in_view
-                    frame               = dict.fromkeys(frame, None)
-                    data = [
-                        [
-                            time.time()    ,
-                            latitude       , longitude          , altitude       ,
-                            altitude_units , num_sats           , datestamp      ,
-                            timestamp      , spd_over_grnd      , true_course    ,
-                            true_track     , spd_over_grnd_kmph , pdop           ,
-                            hdop           , vdo                , num_sv_in_view
-                        ]
-                    ]
-                    self.__csvFileWriter.writerows( data )
+
+                    ivk172_start_time         = start_time
+                    ivk172_latitude           = gga.latitude
+                    ivk172_longitude          = gga.longitude
+                    ivk172_altitude           = gga.altitude
+                    ivk172_altitude_units     = gga.altitude_units
+                    ivk172_num_sats           = gga.num_sats
+                    ivk172_datestamp          = rmc.datestamp
+                    ivk172_timestamp          = rmc.timestamp
+                    ivk172_spd_over_grnd      = rmc.spd_over_grnd
+                    ivk172_true_course        = rmc.true_course
+                    ivk172_true_track         = vtg.true_track
+                    ivk172_spd_over_grnd_kmph = vtg.spd_over_grnd_kmph
+                    ivk172_pdop               = gsa.pdop
+                    ivk172_hdop               = gsa.hdop
+                    ivk172_vdo                = gsa.vdop
+                    ivk172_num_sv_in_view     = gsv.num_sv_in_view
+                    ivk172_frame              = dict.fromkeys( frame , None )
+                    ivk172_end_time           = round( time.monotonic() , 6 )
+                    
                 time.sleep( self.__interval )
         except KeyboardInterrupt as e:
             pass # ignore
@@ -898,7 +939,8 @@ class CameraModuleImpl:
         self.__movieFile               = movieFileName
         self.__csvFile                 = csvFile
         self.__csvFileWriter           = csv.writer( csvFile )
-        self.__end_unix_epoch_time     = None
+        self.__end_time                = None
+        self.__sensor_ts               = None
     #######################################################################
     def __csv_writer( self , stop_event ):
         while not stop_event.is_set() or not CameraModuleImpl.write_queue.empty():
@@ -915,29 +957,24 @@ class CameraModuleImpl:
         SensorWrapper.mpu6050_cond          .acquire()
         SensorWrapper.icm20948_cond         .acquire()
         SensorWrapper.powermonitor_cond     .acquire()
-        #SensorWrapper.garbageCollection_cond.acquire()
-        SensorWrapper.camera_module_cond    .notify()
         if ((self.__frame_count % 30) == 0) :
             SensorWrapper.bme280_cond      .notify()
             SensorWrapper.powermonitor_cond.notify()      
-        # if ((self.__frame_count % 9000) == 0) :
-        #     SensorWrapper.garbageCollection_cond.notify()
-    
         SensorWrapper.mpu6050_cond         .notify()
         SensorWrapper.icm20948_cond        .notify()
-        #SensorWrapper.garbageCollection_ready = True
-        SensorWrapper.camera_module_ready = True
+        SensorWrapper.camera_module_cond   .notify()
         SensorWrapper.bme280_ready        = True
         SensorWrapper.mpu6050_ready       = True
         SensorWrapper.icm20948_ready      = True
         SensorWrapper.powermonitor_ready  = True
-        #SensorWrapper.garbageCollection_cond.release()
-        SensorWrapper.camera_module_cond   .release()
+        SensorWrapper.camera_module_ready = True
         SensorWrapper.bme280_cond          .release()
         SensorWrapper.mpu6050_cond         .release()
         SensorWrapper.icm20948_cond        .release()
         SensorWrapper.powermonitor_cond    .release()
-        self.__end_unix_epoch_time = time.time()
+        SensorWrapper.camera_module_cond   .release()
+        self.__sensor_ts = request.get_metadata().get( "SensorTimestamp" , 0 )
+        self.__end_time  = round( time.monotonic() , 6 )
         self.__frame_ready.set()
     #######################################################################
     def __output_camera_module_csv( self ):
@@ -953,9 +990,80 @@ class CameraModuleImpl:
                     SensorWrapper.camera_module_cond.release()
     
                     data = [
-                        SensorWrapper.start_unix_epoch_time , self.__end_unix_epoch_time , self.__frame_count
+                        SensorWrapper.start_time                    ,
+                        self.__end_time                             ,
+                        self.__sensor_ts                            ,
+                        self.__frame_count                          ,
+                        SensorWrapper.bme280_start_time             ,
+                        SensorWrapper.bme280_end_time               ,
+                        SensorWrapper.bme280_byte_0                 ,
+                        SensorWrapper.bme280_byte_1                 ,
+                        SensorWrapper.bme280_byte_2                 ,
+                        SensorWrapper.bme280_byte_3                 ,
+                        SensorWrapper.bme280_byte_4                 ,
+                        SensorWrapper.bme280_byte_5                 ,
+                        SensorWrapper.bme280_byte_6                 ,
+                        SensorWrapper.bme280_byte_7                 ,
+                        SensorWrapper.mpu6050_start_time            ,
+                        SensorWrapper.mpu6050_end_time              ,
+                        SensorWrapper.mpu6050_byte_0                ,
+                        SensorWrapper.mpu6050_byte1                 ,
+                        SensorWrapper.mpu6050_byte2                 ,
+                        SensorWrapper.mpu6050_byte3                 ,
+                        SensorWrapper.mpu6050_byte4                 ,
+                        SensorWrapper.mpu6050_byte5                 ,
+                        SensorWrapper.mpu6050_byte6                 ,
+                        SensorWrapper.mpu6050_byte7                 ,
+                        SensorWrapper.mpu6050_byte8                 ,
+                        SensorWrapper.mpu6050_byte9                 ,
+                        SensorWrapper.mpu6050_byte10                ,
+                        SensorWrapper.mpu6050_byte11                ,
+                        SensorWrapper.mpu6050_byte12                ,
+                        SensorWrapper.mpu6050_byte13                ,
+                        SensorWrapper.icm20948_start_time           ,
+                        SensorWrapper.icm20948_end_time             ,
+                        SensorWrapper.icm20948_axRaw                ,
+                        SensorWrapper.icm20948_ayRaw                ,
+                        SensorWrapper.icm20948_azRaw                ,
+                        SensorWrapper.icm20948_gxRaw                ,
+                        SensorWrapper.icm20948_gyRaw                ,
+                        SensorWrapper.icm20948_gzRaw                ,
+                        SensorWrapper.icm20948_mxRaw                ,
+                        SensorWrapper.icm20948_myRaw                ,
+                        SensorWrapper.icm20948_mzRaw                ,
+                        SensorWrapper.icm20948_tmpRaw               ,
+                        SensorWrapper.ivk172_latitude               ,
+                        SensorWrapper.ivk172_longitude              ,
+                        SensorWrapper.ivk172_altitude               ,
+                        SensorWrapper.ivk172_altitude_units         ,
+                        SensorWrapper.ivk172_num_sats               ,
+                        SensorWrapper.ivk172_datestamp              ,
+                        SensorWrapper.ivk172_timestamp              ,
+                        SensorWrapper.ivk172_spd_over_grnd          ,
+                        SensorWrapper.ivk172_true_course            ,
+                        SensorWrapper.ivk172_true_track             ,
+                        SensorWrapper.ivk172_spd_over_grnd_kmph     ,
+                        SensorWrapper.ivk172_pdop                   ,
+                        SensorWrapper.ivk172_hdop                   ,
+                        SensorWrapper.ivk172_vdo                    ,
+                        SensorWrapper.ivk172_num_sv_in_view         ,
+                        SensorWrapper.ivk172_frame                  ,
+                        SensorWrapper.powermonitor_start_time       ,
+                        SensorWrapper.powermonitor_end_time         ,
+                        SensorWrapper.powermonitor_voltage          ,
+                        SensorWrapper.powermonitor_throttled        ,
+                        SensorWrapper.powermonitor_cpu              ,
+                        SensorWrapper.powermonitor_mem_used_B       ,
+                        SensorWrapper.powermonitor_mem_total_B      ,
+                        SensorWrapper.powermonitor_mem_available_B  ,
+                        SensorWrapper.powermonitor_mem_percent_used ,
+                        SensorWrapper.powermonitor_temp             ,
+                        SensorWrapper.powermonitor_disk_used_B      ,
+                        SensorWrapper.powermonitor_disk_total_B     ,
+                        SensorWrapper.powermonitor_disk_free_B      ,
+                        SensorWrapper.powermonitor_disk_percent_used
                     ]
-                    #self.__csvFileWriter.writerows( data )
+                    
                     CameraModuleImpl.write_queue.put( data )
                     self.__frame_count += 1
                     SensorWrapper.camera_module_ready = False
@@ -969,7 +1077,8 @@ class CameraModuleImpl:
     #######################################################################
     def doCameraModuleImpl( self ):
         print("[Info] Start the doCameraModuleImpl function.")
-        SensorWrapper.start_unix_epoch_time = time.time()
+        SensorWrapper.start_time = round( time.monotonic() , 6 )
+
         cameraThread = threading.Thread( target=self.__output_camera_module_csv )
         cameraThread.start()
 
