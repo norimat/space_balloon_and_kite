@@ -51,15 +51,13 @@ import gc
 ########################################################################
 class SensorWrapper:
 
-    garbageCollection_cond  = threading.Condition()
-    bme280_cond             = threading.Condition()
+    # bme280_cond             = threading.Condition()
     mpu6050_cond            = threading.Condition()
     icm20948_cond           = threading.Condition()
     camera_module_cond      = threading.Condition()
     powermonitor_cond       = threading.Condition()
     running                 = threading.Event()
-    garbageCollection_ready = False
-    bme280_ready            = False
+    # bme280_ready            = False
     mpu6050_ready           = False
     icm20948_ready          = False
     camera_module_ready     = False
@@ -181,6 +179,7 @@ class SensorWrapper:
         self.__mpu6050_csv           = None
         self.__icm20948_csv          = None
         self.__gps_interval          = None
+        self.__bme280_interval       = None
         self.__analyzerDic           = {}
 
     def __handler( self , signum , frame ):
@@ -241,7 +240,8 @@ class SensorWrapper:
         parser.add_argument( '--height'                , default="1080"                      , help="" )
         parser.add_argument( '--csvbuffer'             , default="512"                       , help="" )
         parser.add_argument( '--gps_port'              , default="/dev/ttyACM0"              , help="" )
-        parser.add_argument( '--gps_interval'          , default="1.0"                       , help="" )
+        parser.add_argument( '--gps_interval'          , default="5.0"                       , help="" )
+        parser.add_argument( '--bme280_interval'       , default="5.0"                       , help="" )
         parser.add_argument( '--bme280_addr'           , default="0x76"                      , help="" )
         parser.add_argument( '--mpu6050_addr'          , default="0x68"                      , help="" )
         parser.add_argument( '--icm20948_addr'         , default="0x68"                      , help="" )
@@ -273,6 +273,7 @@ class SensorWrapper:
             self.__framerate                        = int   ( args.framerate          )
             self.__framebuffer                      = int   ( args.framebuffer        )
             self.__gps_interval                     = float ( args.gps_interval       )
+            self.__bme280_interval                  = float ( args.bme280_interval    )
             self.__bitrate                          = int   ( args.bitrate            )
             self.__width                            = int   ( args.width              )
             self.__height                           = int   ( args.height             )
@@ -357,7 +358,7 @@ class SensorWrapper:
                 'icm20948_mxRaw'                ,
                 'icm20948_myRaw'                ,
                 'icm20948_mzRaw'                ,
-                'icm20948_tmpRaw'
+                'icm20948_tmpRaw'               ,
                 'ivk172_latitude'               ,
                 'ivk172_longitude'              ,
                 'ivk172_altitude'               ,
@@ -416,7 +417,6 @@ class SensorWrapper:
             self.__camera_fa  ,
             movieFileName
         )
-        #self.__garbageCollectionImpl = GarbageColloctionImpl()
         #########################################################################
         if self.__icm20948_en :
             print("[Info] Activate the ICM-20948.")
@@ -424,7 +424,7 @@ class SensorWrapper:
         #########################################################################
         if self.__bme280_en :
             print("[Info] Activate the BME280.")
-            self.__bme280Impl = BME280Impl( self.__bme280_bus , self.__bme280_addr )
+            self.__bme280Impl = BME280Impl( self.__bme280_bus , self.__bme280_addr , self.__bme280_interval )
         #########################################################################
         if self.__mpu6050_en:
             print("[Info] Activate the MPU6050.")
@@ -450,8 +450,6 @@ class SensorWrapper:
             threadList = []
             try:
                 threadList.append( threading.Thread(                            target=self.__cameraModuleImpl.doCameraModuleImpl ) )
-                #threadList.append( threading.Thread(                            target=self.__garbageCollectionImpl.doGarbageCollectionImpl    ) )
-                
                 self.__gps_en          and threadList.append( threading.Thread( target=self.__gpsModuleImpl   .doGpsModuleImpl    ) )
                 self.__bme280_en       and threadList.append( threading.Thread( target=self.__bme280Impl      .doBME280Impl       ) )
                 self.__mpu6050_en      and threadList.append( threading.Thread( target=self.__mpu6050Impl     .doMPU6050Impl      ) )
@@ -563,30 +561,6 @@ class CalibrationICM20948Impl:
         gyro_range  = self.__read_gyro_range(imu)
         self.__save_calibration_to_json( offset , soft_iron_matrix , accel_range , gyro_range , output_timestamp_dir+"/mag_calib.json" )
 
-
-########################################################################
-class GarbageColloctionImpl:
-
-    def __init__( self ):
-        print("[Info] Create an instance of the GarbageCollectionImpl class.")
-    #######################################################################
-    def doGarbageCollectionImpl(self):
-        print("[Info] Start the doGarbageCollectionImpl function.")
-        while SensorWrapper.running.is_set():
-            try:
-                SensorWrapper.garbageCollection_cond.acquire()
-                while not SensorWrapper.garbageCollection_ready:
-                    SensorWrapper.garbageCollection_cond.wait()
-                SensorWrapper.garbageCollection_cond.release()
-
-                gc.collect()
-                
-                SensorWrapper.garbageCollection_ready = False
-            except (KeyboardInterrupt , ValueError) as e:
-                SensorWrapper.running.clear()
-            except Exception as e:
-                print(e)
-
 ########################################################################
 class PowerMonitorImpl:
 
@@ -694,23 +668,15 @@ class PowerMonitorImpl:
 ########################################################################
 class BME280Impl:
 
-    def __init__( self , bus , address ):
+    def __init__( self , bus , address , interval ):
         print("[Info] Create an instance of the BME280Impl class.")
         print("[Info] The device address of the BME280 is " + str(hex(address)) )
         self.__address       = address
         self.__bus           = bus
+        self.__interval      = interval
         self.__bus.write_byte_data( self.__address , 0xF2 , 0x01 )  # Humidity oversampling x1
         self.__bus.write_byte_data( self.__address , 0xF4 , 0x27 )  # Normal mode, temp/press oversampling x1
         self.__bus.write_byte_data( self.__address , 0xF5 , 0xA0 )  # Config
-    #######################################################################
-    def __csv_writer( self , stop_event ):
-        while not stop_event.is_set() or not BME280Impl.write_queue.empty():
-            try:
-                row = BME280Impl.write_queue.get( timeout=1.5 )
-                self.__csvFileWriter.writerow( row )
-            except queue.Empty:
-                continue
-        self.__csvFile.flush()
     #######################################################################
     def __read_sensor(self):
         # first only
@@ -722,36 +688,38 @@ class BME280Impl:
     #######################################################################
     def doBME280Impl(self):
         print("[Info] Start the doBME280Impl function.")
-        try:
-            while SensorWrapper.running.is_set():
-                try:
-                    SensorWrapper.bme280_cond.acquire()
-                    while not SensorWrapper.bme280_ready:
-                        SensorWrapper.bme280_cond.wait()
-                    SensorWrapper.bme280_cond.release()
+        #try:
+        while SensorWrapper.running.is_set():
+                # try:
+                #     SensorWrapper.bme280_cond.acquire()
+                #     while not SensorWrapper.bme280_ready:
+                #         SensorWrapper.bme280_cond.wait()
+                #     SensorWrapper.bme280_cond.release()
 
-                    start_time = round( time.monotonic() , 6 )
-                    read8byte  = self.__read_sensor()
+            start_time = round( time.monotonic() , 6 )
+            read8byte  = self.__read_sensor()
 
-                    SensorWrapper.bme280_start_time = start_time
-                    SensorWrapper.bme280_end_time   = round( time.monotonic() , 6)
-                    SensorWrapper.bme280_byte_0     = read8byte[0]
-                    SensorWrapper.bme280_byte_1     = read8byte[1]
-                    SensorWrapper.bme280_byte_2     = read8byte[2]
-                    SensorWrapper.bme280_byte_3     = read8byte[3]   
-                    SensorWrapper.bme280_byte_4     = read8byte[4]
-                    SensorWrapper.bme280_byte_5     = read8byte[5]
-                    SensorWrapper.bme280_byte_6     = read8byte[6]
-                    SensorWrapper.bme280_byte_7     = read8byte[7]
+            SensorWrapper.bme280_start_time = start_time
+            SensorWrapper.bme280_end_time   = round( time.monotonic() , 6)
+            SensorWrapper.bme280_byte_0     = read8byte[0]
+            SensorWrapper.bme280_byte_1     = read8byte[1]
+            SensorWrapper.bme280_byte_2     = read8byte[2]
+            SensorWrapper.bme280_byte_3     = read8byte[3]   
+            SensorWrapper.bme280_byte_4     = read8byte[4]
+            SensorWrapper.bme280_byte_5     = read8byte[5]
+            SensorWrapper.bme280_byte_6     = read8byte[6]
+            SensorWrapper.bme280_byte_7     = read8byte[7]
+
+            time.sleep(self.__interval)
                     
-                    SensorWrapper.bme280_ready = False
-                except (KeyboardInterrupt , ValueError) as e:
-                    SensorWrapper.running.clear()
-                except Exception as e:
-                    print(e)
-        finally:
-            stop_event.set()
-            writer_thread.join()
+                #     SensorWrapper.bme280_ready = False
+                # except (KeyboardInterrupt , ValueError) as e:
+                #     SensorWrapper.running.clear()
+                # except Exception as e:
+                #     print(e)
+        # finally:
+        #     stop_event.set()
+        #     writer_thread.join()
 
 ########################################################################
 class MPU6050Impl:
@@ -899,24 +867,24 @@ class GPSModuleImpl:
                         frame["GGA"] , frame["RMC"] , frame["VTG"] , frame["GSA"] , frame["GSV"]
                     )
 
-                    ivk172_start_time         = start_time
-                    ivk172_latitude           = gga.latitude
-                    ivk172_longitude          = gga.longitude
-                    ivk172_altitude           = gga.altitude
-                    ivk172_altitude_units     = gga.altitude_units
-                    ivk172_num_sats           = gga.num_sats
-                    ivk172_datestamp          = rmc.datestamp
-                    ivk172_timestamp          = rmc.timestamp
-                    ivk172_spd_over_grnd      = rmc.spd_over_grnd
-                    ivk172_true_course        = rmc.true_course
-                    ivk172_true_track         = vtg.true_track
-                    ivk172_spd_over_grnd_kmph = vtg.spd_over_grnd_kmph
-                    ivk172_pdop               = gsa.pdop
-                    ivk172_hdop               = gsa.hdop
-                    ivk172_vdo                = gsa.vdop
-                    ivk172_num_sv_in_view     = gsv.num_sv_in_view
-                    ivk172_frame              = dict.fromkeys( frame , None )
-                    ivk172_end_time           = round( time.monotonic() , 6 )
+                    SensorWrapper.ivk172_start_time         = start_time
+                    SensorWrapper.ivk172_latitude           = gga.latitude
+                    SensorWrapper.ivk172_longitude          = gga.longitude
+                    SensorWrapper.ivk172_altitude           = gga.altitude
+                    SensorWrapper.ivk172_altitude_units     = gga.altitude_units
+                    SensorWrapper.ivk172_num_sats           = gga.num_sats
+                    SensorWrapper.ivk172_datestamp          = rmc.datestamp
+                    SensorWrapper.ivk172_timestamp          = rmc.timestamp
+                    SensorWrapper.ivk172_spd_over_grnd      = rmc.spd_over_grnd
+                    SensorWrapper.ivk172_true_course        = rmc.true_course
+                    SensorWrapper.ivk172_true_track         = vtg.true_track
+                    SensorWrapper.ivk172_spd_over_grnd_kmph = vtg.spd_over_grnd_kmph
+                    SensorWrapper.ivk172_pdop               = gsa.pdop
+                    SensorWrapper.ivk172_hdop               = gsa.hdop
+                    SensorWrapper.ivk172_vdo                = gsa.vdop
+                    SensorWrapper.ivk172_num_sv_in_view     = gsv.num_sv_in_view
+                    SensorWrapper.ivk172_frame              = dict.fromkeys( frame , None )
+                    SensorWrapper.ivk172_end_time           = round( time.monotonic() , 6 )
                     
                 time.sleep( self.__interval )
         except KeyboardInterrupt as e:
@@ -960,22 +928,22 @@ class CameraModuleImpl:
     #######################################################################
     def __process_frame( self, request ):
         SensorWrapper.camera_module_cond    .acquire()
-        SensorWrapper.bme280_cond           .acquire()
+        #SensorWrapper.bme280_cond           .acquire()
         SensorWrapper.mpu6050_cond          .acquire()
         SensorWrapper.icm20948_cond         .acquire()
         SensorWrapper.powermonitor_cond     .acquire()
         if ((self.__frame_count % 30) == 0) :
-            SensorWrapper.bme280_cond      .notify()
+            #SensorWrapper.bme280_cond      .notify()
             SensorWrapper.powermonitor_cond.notify()      
         SensorWrapper.mpu6050_cond         .notify()
         SensorWrapper.icm20948_cond        .notify()
         SensorWrapper.camera_module_cond   .notify()
-        SensorWrapper.bme280_ready        = True
+        # SensorWrapper.bme280_ready        = True
         SensorWrapper.mpu6050_ready       = True
         SensorWrapper.icm20948_ready      = True
         SensorWrapper.powermonitor_ready  = True
         SensorWrapper.camera_module_ready = True
-        SensorWrapper.bme280_cond          .release()
+        # SensorWrapper.bme280_cond          .release()
         SensorWrapper.mpu6050_cond         .release()
         SensorWrapper.icm20948_cond        .release()
         SensorWrapper.powermonitor_cond    .release()
