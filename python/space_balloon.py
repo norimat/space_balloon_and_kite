@@ -473,6 +473,11 @@ class SensorWrapper:
             cii = CalibrationICM20948Impl( self.__json_output_dir , self.__icm20948_addr , self.__icm20948_i2cbus )
             cii.doCalibrationICM20948Impl()
         #######################################################################
+        elif self.__mode == 3:
+            print("[Info] Start the BME280 calibration mode.")
+            cii = CalibrationBME280Impl( self.__json_output_dir , self.__bme280_addr , self.__bme280_i2cbus )
+            cii.doCalibrationBME280Impl()
+        #######################################################################
 
 ########################################################################
 class CalibrationICM20948Impl:
@@ -559,7 +564,71 @@ class CalibrationICM20948Impl:
         soft_iron_matrix = self.__compute_soft_iron_matrix(centered)
         accel_range = self.__read_accel_range(imu)
         gyro_range  = self.__read_gyro_range(imu)
-        self.__save_calibration_to_json( offset , soft_iron_matrix , accel_range , gyro_range , output_timestamp_dir+"/mag_calib.json" )
+        self.__save_calibration_to_json( offset , soft_iron_matrix , accel_range , gyro_range , output_timestamp_dir+"/icm20948_calib.json" )
+
+########################################################################
+class CalibrationBME280Impl:
+
+    def __init__(self , output_dir , address , bus_num ):
+        self.__output_dir = output_dir
+        self.__address    = address
+        self.__bus        = smbus2.SMBus( bus_num )
+        self.__bus.write_byte_data( self.__address , 0xF2 , 0x01 )  # Humidity oversampling x1
+        self.__bus.write_byte_data( self.__address , 0xF4 , 0x27 )  # Normal mode, temp/press oversampling x1
+        self.__bus.write_byte_data( self.__address , 0xF5 , 0xA0 )  # Config
+    #######################################################################
+    def __save_calibration_to_json(
+            self , read24byte , read1Byte0xA1 , read7byte , filename="bme280_calibration.json"
+    ):
+        data = {
+            "bme280_byte_00" : read24byte[ 0] ,
+            "bme280_byte_01" : read24byte[ 1] ,
+            "bme280_byte_02" : read24byte[ 2] ,
+            "bme280_byte_03" : read24byte[ 3] ,
+            "bme280_byte_04" : read24byte[ 4] ,
+            "bme280_byte_05" : read24byte[ 5] ,
+            "bme280_byte_06" : read24byte[ 6] ,
+            "bme280_byte_07" : read24byte[ 7] ,
+            "bme280_byte_08" : read24byte[ 8] ,
+            "bme280_byte_09" : read24byte[ 9] ,
+            "bme280_byte_10" : read24byte[10] ,
+            "bme280_byte_11" : read24byte[11] ,
+            "bme280_byte_12" : read24byte[12] ,
+            "bme280_byte_13" : read24byte[13] ,
+            "bme280_byte_14" : read24byte[14] ,
+            "bme280_byte_15" : read24byte[15] ,
+            "bme280_byte_16" : read24byte[16] ,
+            "bme280_byte_17" : read24byte[17] ,
+            "bme280_byte_18" : read24byte[18] ,
+            "bme280_byte_19" : read24byte[19] ,
+            "bme280_byte_19" : read24byte[19] ,
+            "bme280_byte_20" : read24byte[20] ,
+            "bme280_byte_21" : read24byte[21] ,
+            "bme280_byte_22" : read24byte[22] ,
+            "bme280_byte_23" : read24byte[23] ,
+            "bme280_byte_24" : read1Byte0xA1  ,
+            "bme280_byte_25" : read7byte [ 0] ,
+            "bme280_byte_26" : read7byte [ 1] ,
+            "bme280_byte_27" : read7byte [ 2] ,
+            "bme280_byte_28" : read7byte [ 3] ,
+            "bme280_byte_29" : read7byte [ 4] ,
+            "bme280_byte_30" : read7byte [ 5] ,
+            "bme280_byte_31" : read7byte [ 6]
+        }
+        f = open(filename, "w")
+        json.dump(data, f, indent=4)
+        f.close()                      
+    #######################################################################
+    def doCalibrationBME280Impl( self ):
+        timestamp            = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_timestamp_dir = self.__output_dir + "/" + timestamp
+        os.makedirs( self.__output_dir    , exist_ok=True )
+        os.makedirs( output_timestamp_dir , exist_ok=True )
+        read24byte    = self.__bus.read_i2c_block_data ( self.__address , 0x88 , 24 ) # calib
+        read1Byte0xA1 = self.__bus.read_byte_data      ( self.__address , 0xA1      ) # calib
+        read7byte     = self.__bus.read_i2c_block_data ( self.__address , 0xE1 ,  7 ) # calib
+        self.__bus.close()
+        self.__save_calibration_to_json( read24byte , read1Byte0xA1 , read7byte , output_timestamp_dir+"/bme280_calib.json" )
 
 ########################################################################
 class PowerMonitorImpl:
@@ -679,10 +748,6 @@ class BME280Impl:
         self.__bus.write_byte_data( self.__address , 0xF5 , 0xA0 )  # Config
     #######################################################################
     def __read_sensor(self):
-        # first only
-        # read24byte    = self.__bus.read_i2c_block_data ( self.__address , 0x88 , 24 ) # calib
-        # read1Byte0xA1 = self.__bus.read_byte_data      ( self.__address , 0xA1      ) # calib
-        # read7byte     = self.__bus.read_i2c_block_data ( self.__address , 0xE1 ,  7 ) # calib
         read8byte     = self.__bus.read_i2c_block_data ( self.__address , 0xF7 ,  8 ) # 
         return read8byte
     #######################################################################
