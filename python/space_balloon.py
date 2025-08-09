@@ -702,7 +702,7 @@ class PowerMonitorImpl:
                         SensorWrapper.powermonitor_cond.wait()
                     SensorWrapper.powermonitor_cond.release()
 
-                    start_time = round( time.monotonic() , 6 )
+                    start_time = time.monotonic_ns()
                     voltage    = self.__get_voltage()
                     throttled  = self.__get_throttled()
                     cpu        = self.__get_cpu_usage()
@@ -711,7 +711,7 @@ class PowerMonitorImpl:
                     disk       = self.__get_disk_usage()
                     
                     SensorWrapper.powermonitor_start_time        = start_time
-                    SensorWrapper.powermonitor_end_time          = round( time.monotonic() , 6 )
+                    SensorWrapper.powermonitor_end_time          = time.monotonic_ns()
                     SensorWrapper.powermonitor_voltage           = voltage
                     SensorWrapper.powermonitor_throttled         = throttled
                     SensorWrapper.powermonitor_cpu               = cpu
@@ -761,11 +761,11 @@ class BME280Impl:
                 #         SensorWrapper.bme280_cond.wait()
                 #     SensorWrapper.bme280_cond.release()
 
-            start_time = round( time.monotonic() , 6 )
+            start_time = time.monotonic_ns()
             read8byte  = self.__read_sensor()
 
             SensorWrapper.bme280_start_time = start_time
-            SensorWrapper.bme280_end_time   = round( time.monotonic() , 6)
+            SensorWrapper.bme280_end_time   = time.monotonic_ns()
             SensorWrapper.bme280_byte_0     = read8byte[0]
             SensorWrapper.bme280_byte_1     = read8byte[1]
             SensorWrapper.bme280_byte_2     = read8byte[2]
@@ -816,7 +816,7 @@ class MPU6050Impl:
                         SensorWrapper.mpu6050_cond.wait()
                     SensorWrapper.mpu6050_cond.release()
 
-                    start_time = round( time.monotonic() , 6 )
+                    start_time = time.monotonic_ns()
                     mpu6050_data = None
                     retry_count  = 0
                     while ((mpu6050_data is None) or (retry_count==10)):
@@ -828,7 +828,7 @@ class MPU6050Impl:
 
                     if mpu6050_data is not None:
                         SensorWrapper.mpu6050_start_time = start_time
-                        SensorWrapper.mpu6050_end_time   = round( time.monotonic() , 6 )
+                        SensorWrapper.mpu6050_end_time   = time.monotonic_ns()
                         SensorWrapper.mpu6050_byte_0     = mpu6050_data[ 0]
                         SensorWrapper.mpu6050_byte1      = mpu6050_data[ 1]
                         SensorWrapper.mpu6050_byte2      = mpu6050_data[ 2] 
@@ -873,12 +873,12 @@ class ICM20948Impl:
                         SensorWrapper.icm20948_cond.wait()
                     SensorWrapper.icm20948_cond.release()
 
-                    start_time = round( time.monotonic() , 6 )
+                    start_time = time.monotonic_ns()
                     if self.__imu.dataReady():
                         self.__imu.getAgmt()
 
                         SensorWrapper.icm20948_start_time = start_time
-                        SensorWrapper.icm20948_end_time   = round( time.monotonic() , 6 )
+                        SensorWrapper.icm20948_end_time   = time.monotonic_ns()
                         SensorWrapper.icm20948_axRaw      = self.__imu.axRaw
                         SensorWrapper.icm20948_ayRaw      = self.__imu.ayRaw
                         SensorWrapper.icm20948_azRaw      = self.__imu.azRaw 
@@ -912,7 +912,7 @@ class GPSModuleImpl:
         frame = {"GGA": None, "RMC": None, "VTG": None, "GSA": None, "GSV": None}
         try:
             while True:
-                start_time = round( time.monotonic() , 6 )
+                start_time = time.monotonic_ns()
                 raw = self.__ser.readline().decode('ascii', errors='replace').strip()
                 if not raw.startswith('$'):
                     continue
@@ -949,7 +949,7 @@ class GPSModuleImpl:
                     SensorWrapper.ivk172_vdo                = gsa.vdop
                     SensorWrapper.ivk172_num_sv_in_view     = gsv.num_sv_in_view
                     SensorWrapper.ivk172_frame              = dict.fromkeys( frame , None )
-                    SensorWrapper.ivk172_end_time           = round( time.monotonic() , 6 )
+                    SensorWrapper.ivk172_end_time           = time.monotonic_ns()
                     
                 time.sleep( self.__interval )
         except KeyboardInterrupt as e:
@@ -1014,7 +1014,7 @@ class CameraModuleImpl:
         SensorWrapper.powermonitor_cond    .release()
         SensorWrapper.camera_module_cond   .release()
         self.__sensor_ts = request.get_metadata().get( "SensorTimestamp" , 0 )
-        self.__end_time  = round( time.monotonic() , 6 )
+        self.__end_time  = time.monotonic_ns()
         self.__frame_ready.set()
     #######################################################################
     def __output_camera_module_csv( self ):
@@ -1117,7 +1117,7 @@ class CameraModuleImpl:
     #######################################################################
     def doCameraModuleImpl( self ):
         print("[Info] Start the doCameraModuleImpl function.")
-        SensorWrapper.start_time = round( time.monotonic() , 6 )
+        SensorWrapper.start_time = time.monotonic_ns()
 
         cameraThread = threading.Thread( target=self.__output_camera_module_csv )
         cameraThread.start()
@@ -1160,7 +1160,7 @@ class SensorAnalyzerImpl:
                     self.__parameterDic["map_animation_en"]
                 )
                 # GPSデータを地図、GoogleMapデータで可視化できるようにする
-                threadList.append( threading.Thread( target=gai.doGPSAnalyzerImpl ) )
+                threadList.append( multiprocessing.Process( target=gai.doGPSAnalyzerImpl ) )
 
             # 動画データが存在する場合
             if os.path.isfile( self.__parameterDic["input_dir"] + "/" + "movie.h264" ):
@@ -1174,7 +1174,7 @@ class SensorAnalyzerImpl:
                 # MP4に変換したい場合
                 if self.__parameterDic["mp4_en"]:
                     threadList.append(
-                        threading.Thread(
+                        multiprocessing.Process(
                             target = mai.doMovieAnalyzerImpl(
                                 False ,
                                 self.__parameterDic["input_dir"] + "/" + "movie.h264" ,
@@ -1199,7 +1199,7 @@ class SensorAnalyzerImpl:
                     # マージ後データを動画データに組み込む
                     iai.doI2CAnalyzerImpl()
                     threadList.append(
-                        threading.Thread(
+                        multiprocessing.Process(
                             target= mai.doMovieAnalyzerImpl(
                                 self.__parameterDic["frame_sync_en"] ,
                                 self.__parameterDic["input_dir"] + "/" + "movie.h264" ,
