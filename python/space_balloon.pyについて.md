@@ -15,6 +15,7 @@
 | 2025/07/01 | 「[8-2-1. ハードアイアン補正](#8-2-1-ハードアイアン補正)」および「[8-2-2. ソフトアイアン補正](#8-2-2-ソフトアイアン補正)」を追記  |
 | 2025/07/06 | 「[1-3. 入出力](#1-3-入出力)」について出力にICM-20948キャリブレーション結果を追加<br>「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　--modeにICM-20948キャリブレーションモード:2を追加<br>　`--calib_json`オプションを追加<br>「[1-4-1.センサー取得モード](#1-4-1-センサー取得モード)」について取得するデータをセンサーレジスタデータに変更<br>「[1-4-1-1. 動画取得](#1-4-1-1-動画取得)」について動画取得をpicmera2に変更した内容に修正<br>「[1-4-1-2. BME280計測データ取得](#1-4-1-2-BME280計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-3. MPU6050計測データ取得](#1-4-1-3-MPU6050計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-4. MPU9250計測データ取得](#1-4-1-4-MPU9250計測データ取得)」について削除<br>「[1-4-1-4. ICM-20948計測データ取得](#1-4-1-4-ICM-20948計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-5. IVK172 G-Mouse USB GPS計測データ取得](#1-4-1-5-IVK172 G-Mouse USB GPS計測データ取得)」について<br>　データ更新時間が長いためフレーム同期取得はせず、経度、緯度および高度を優先しないように修正<br>「[1-4-1-6. PowerMonitorデータ取得](#1-4-1-6-PowerMonitorデータ取得)」について追加<br>「[1-4-2.センサーデータ解析モード](#1-4-2-センサーデータ解析モード)」について<br>　ICM-20948の内容追加<br>　GPSデータ追加<br>　PowerMonitorの内容追加<br>「[1-4-2-1. 高度の算出](#1-4-2-1-高度の算出)」について削除<br>「[1-4-2-1. 動画データとセンサーデータの同期](#1-4-2-1-動画データとセンサーデータの同期)」について内容修正<br>「[1-4-2-2. BME280から取得したデータのグラフ作成機能](#1-4-2-2-BME280から取得したデータのグラフ作成機能)」について削除<br>「[1-4-2-3. MPU6050から取得したデータのグラフ作成機能](#1-4-2-3-MPU6050から取得したデータのグラフ作成機能)」について削除<br>「[1-4-2-4. MPU9250から取得したデータのグラフ作成機能](#1-4-2-4-MPU9250から取得したデータのグラフ作成機能)」について削除<br>「[1-4-3.ICM-20948キャリブレーションモード](#1-4-3-ICM-20948キャリブレーションモード)」について追加<br>「[2. 動作環境](#2-動作環境)」についてBulleseyeからBookwarmに修正<br>「[3. 実行方法](#3-実行方法)」について<br>　オプション構成変更<br>　説明修正<br>　*ICM-20948キャリブレーションモード*の説明追加<br>「[4-2. Pythonコードの説明](#4-2-Pythonコードの説明)」について説明とコード修正<br>「[6-2. Pythonコードの説明](#6-2-Pythonコードの説明)」について説明とコード修正<br>「[7. MPU9250を用いた加速度、角速度および地磁気の取得について](#7-MPU9250を用いた加速度、角速度および地磁気の取得について)」について削除<br>「[7. ICM-20948を用いた加速度、角速度および地磁気の取得について](#7-ICM-20948を用いた加速度、角速度および地磁気の取得について)」について修正<br>「[8. PowerMonitorを用いた計測データの取得について](#8-PowerMonitorを用いた計測データの取得について)」について追加<br>「[9. IVK172 G-Mouse USB GPSを用いた計測データの取得について](#9-IVK172 G-Mouse USB GPSを用いた計測データの取得について)」について修正<br>「[付録](#付録)」について<br>　「[Raspberry Pi OSの準備](#Raspberry-Pi-OSの準備)」<br>　Bookwarmを追加<br>　「[Python実行環境準備](#Python実行環境準備)」<br>　MPU9250の記述削除<br>　gpac削除<br> |
 | 2025/07/28 | 「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　フレームバッファ、csvバッファおよび出力先個別設定オプションの`--framebuffer`、`--csvbuffer`、`--movie_output_dir`および`--csv_output_dir`を追加<br> 「[3. 実行方法](#3-実行方法)」について<br>　実行オプション変更に伴い修正  |
+| 2025/08/31 | 「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　センサーデータ解析モードでも解析対象を指定するため以下オプションを両方に指定できるように追加　<br>　`--bme280`　<br>　`--mpu6050`　<br>　`--icm20948`　<br>　`--gps`　<br>　`--powermonitor`　<br>　`--framerate`　<br> ICM-20948およびBME280のキャリブレーションjsonを出力する先のディレクトリ指定オプションを追加<br>　`--json_output_dir`<br> センサーデータ解析モード時にICM-20948およびBME280のキャリブレーションjsonを指定するオプション追加<br>　`--icm20948_calib_json`　<br>　`--bme280_calib_json　<br>「[付録](#付録)」について<br>　「[Pythonスクリプトの自動起動設定](#Pythonスクリプトの自動起動設定)」を追加<br>　  |
 
 
 ## 1. space_balloon.py概要
@@ -90,21 +91,23 @@ space_balloon.pyは実行開始時および実行中に有効機能に応じて�
 |--------------------------------------------|---------------------------|----------------|--------------------------- |
 |`--help`                                    | -                         | -              | ヘルプメッセージを表示する |
 |`--mode <モード番号>`                       | -                         | 0              | モード選択<br>センサー取得モード:0<br>センサーデータ解析モード:1<br>ICM-20948キャリブレーションモード:2<br>例: `--mode 0` |
+|`--json_output_dir <出力先ディレクトリ名>`    | センサー取得モード        | ./             | ICM-20948またはBME280のキャリブレーション結果出力先ディレクトリ<br>例: `--json_output_dir ./json_output` |
 |`--csv_output_dir <出力先ディレクトリ名>`    | センサー取得モード        | ./             | センサーから取得したデータのcsvファイル出力先ディレクトリを指定する<br>例: `--csv_output_dir ./output` |
 |`--movie_output_dir <出力先ディレクトリ名>`  | センサー取得モード        | ./             | センサーから取得したデータのH264動画出力先ディレクトリを指定する<br>例: `--movie_output_dir ./output` |
 |`--framebuffer <フレームバッファ数>`        | センサー取得モード        | 4(4フレームxbitrate分)             | 撮影時のフレームバッファ設定<br>例: `--framebuffer 40` |
 |`--csvbuffer <csvバッファ数>`              | センサー取得モード        | 512(512byte)    | csvの一時格納RAMbyte数設定<br>例: `--csvbuffer 262144` |
-|`--framerate <フレームレート>`              | センサー取得モード        | 30             | 撮影時のフレームレート設定<br>例: `--framerate 30` |
+|`--framerate <フレームレート>`              | センサー取得モード/センサーデータ解析モード        | 30             | センサー取得モード:撮影時のフレームレート設定<br>センサーデータ解析モード:動画変換時のフレームレート<br>例: `--framerate 30` |
 |`--bitrate <ビットレート>`                  | センサー取得モード        | 8000000(8Mbps) | 撮影時のビットレート設定<br>ビット単位で指定する<br>例: `--bitrate 8000000` |
 |`--width <水平サイズ>`                      | センサー取得モード        | 1920           | 撮影時の水平サイズ設定<br>例: `--width 1920` |
 |`--height <垂直サイズ>`                     | センサー取得モード        | 1080           | 撮影時の垂直サイズ設定<br>例: `--height 1080` |
-|`--gps`                                    | センサー取得モード        | FalseでOFF     | IVK172 G-Mouse USB GPSからのデータ取得を有効化するイネーブルオプション |
+|`--gps`                                    | センサー取得モード/センサーデータ解析モード        | FalseでOFF     | センサー取得モード:IVK172 G-Mouse USB GPSからのデータ取得を有効化するイネーブルオプション<br>センサーデータ解析モード:計測データ時にIVK172 G-Mouse USB GPSの結果を同期する |
 |`--gps_port`                               | センサー取得モード        | /dev/ttyACM0     | IVK172 G-Mouse USB GPSのUSBシリアルポート |
 |`--gps_interval <計測間隔>`                 | センサー取得モード        | 1.0(1.0sec)    | IVK172 G-Mouse USB GPSからデータを取得する間隔<br>例: `--gps_interval 1.0` |
-|`--bme280`                                 | センサー取得モード        | FalseでOFF     | BME280からのデータ取得を有効化するイネーブルオプション |
-|`--mpu6050`                                | センサー取得モード        | FalseでOFF     | MPU6050からのデータ取得を有効化するイネーブルオプション |
-|`--icm20948`                              | センサー取得モード        | FalseでOFF     | ICM-20948からのデータ取得を有効化するイネーブルオプション |
-|`--powermonitor`                          | センサー取得モード        | FalseでOFF     | Power Monitorデータ取得を有効化するイネーブルオプション |
+|`--bme280`                                 | センサー取得モード/センサーデータ解析モード        | FalseでOFF     | センサー取得モード:BME280からのデータ取得を有効化するイネーブルオプション<br>センサーデータ解析モード:計測データ時にPowerMonitorの結果を同期する |
+|`--bme280_interval <計測間隔>`                 | センサー取得モード        | 1.0(1.0sec)    | BMe280からデータを取得する間隔<br>例: `--bme280_interval 1.0` |
+|`--mpu6050`                                | センサー取得モード/センサーデータ解析モード        | FalseでOFF     | センサー取得モード:MPU6050からのデータ取得を有効化するイネーブルオプション<br>センサーデータ解析モード:計測データ時にMPU6050の結果を同期する |
+|`--icm20948`                              | センサー取得モード/センサーデータ解析モード        | FalseでOFF     | センサー取得モード:ICM-20948からのデータ取得を有効化するイネーブルオプション<br>センサーデータ解析モード:計測データ時にICM-20948の結果を同期する |
+|`--powermonitor`                          | センサー取得モード/センサーデータ解析モード        | FalseでOFF     | センサー取得モード:Power Monitorデータ取得を有効化するイネーブルオプション<br>センサーデータ解析モード:計測データ時にPowerMonitorの結果を同期する |
 |`--bme280_i2cbus <BME280のI2Cバス番号>`  | センサー取得モード        | 1           | BME280のI2Cバス番号<br>例: `--bme280_i2cbus 4` |
 |`--mpu6050_i2cbus <MPU6050のI2Cバス番号>`| センサー取得モード        | 1           | MPU6050のI2Cバス番号<br>例: `--mpu6050_i2cbus 3` |
 |`--icm20948_i2cbus <ICM-20948のI2Cバス番号>`| センサー取得モード        | 1           | ICM-20948のI2Cバス番号<br>例: `--icm20948_i2cbus 1` |
@@ -116,7 +119,8 @@ space_balloon.pyは実行開始時および実行中に有効機能に応じて�
 |`--mp4`                                     | センサーデータ解析モード  | FalseでOFF     | H264形式動画ファイルをMP4形式で出力<br>--frame_syncオプションを有効にすることで同期データを加えた動画もMP4で出力する |
 |`--excel`                                   | センサーデータ解析モード  | FalseでOFF     | センサーデータ解析モードで出力する加工csvファイルをcsvでなく.xlsx形式で出力する |
 |`--map_animation`                           |  センサーデータ解析モード  | FalseでOFF     | GPS取得データをもとにアニメーション付きマップデータ出力をする<br>時系列データ加工機能未実装のため指定しても動作しない |
-|`--calib_json <ICM-20948のキャリブレーション結果jsonファイル名>` |  センサーデータ解析モード  | ./mag_calib.json | ICM-20948キャリブレーションモードで出力したjsonファイルを指定する。<br>例:`--calib_json ./mag_calib.json` |
+|`--icm20948_calib_json <ICM-20948のキャリブレーション結果jsonファイル名>` |  センサーデータ解析モード  | ./icm20948_calib.json | ICM-20948キャリブレーションモードで出力したjsonファイルを指定する。<br>例:`--icm20948_calib_json ./mag_calib.json` |
+|`--bme280_calib_json <BME280のキャリブレーション結果jsonファイル名>` |  センサーデータ解析モード  | ./bme280_calib.json | BME280キャリブレーションモードで出力したjsonファイルを指定する。<br>例:`--bme280_calib_json ./mag_calib.json` |
 
 #### 1-3-3. csvファイルおよびDataFrame
 
@@ -398,6 +402,7 @@ python space_balloon.py            \
        --bme280                    \
        --bme280_addr 0x76          \
        --bme280_i2cbus 4           \
+       --bme280_interval 1         \
        --mpu6050                   \
        --mpu6050_addr 0x68         \
        --mpu6050_i2cbus 3          \
@@ -411,7 +416,7 @@ python space_balloon.py            \
        --movie_output_dir ./output
 ```
 
-*センサーデータ解析モード*でカメラ・I2Cセンサー計測データとの同期をしてICM-20948のキャリブレーションデータを使用しMP4で動画を出力し、Excelファイルで同期結果を出力するための実行例は以下となる。
+*センサーデータ解析モード*でカメラ・I2Cセンサー計測データとの同期をしてICM-20948およびBME280のキャリブレーションデータを使用しMP4で動画を出力し、Excelファイルで同期結果を出力するための実行例は以下となる。
 
 ```sh
 python space_balloon.py                                     \
@@ -419,7 +424,8 @@ python space_balloon.py                                     \
        --mp4                                                \
        --frame_sync                                         \
        --excel                                              \
-       --calib_json ./output/20250701_223019/mag_calib.json \
+       --icm20948_calib_json ./output/20250701_223019/icm20948_calib.json \
+       --bme280_calib_json   ./output/20250701_223019/bme280_calib.json   \
        --input_dir ./output/20250702_222933
 ```
 
@@ -428,6 +434,16 @@ python space_balloon.py                                     \
 ```sh
 python space_balloon.py     \
        --mode 2             \
+       --icm20948_addr 0x68 \
+       --icm20948_i2cbus 1  \
+       --output_dir output
+```
+
+*BME280キャリブレーションモード*を実行する例は以下となる。
+
+```sh
+python space_balloon.py     \
+       --mode 3             \
        --icm20948_addr 0x68 \
        --icm20948_i2cbus 1  \
        --output_dir output
@@ -2361,6 +2377,88 @@ TeraTermの新しい接続画面で「ホスト(T)」の欄へ公開鍵認証を
 RaspberryPiのIPアドレス /auth=publickey /user=ユーザー名 /keyfile=任意のフォルダパス\id_ras
 
 例)192.168.0.55 /auth=publickey /user=iamuser_name /keyfile=C:\User\iamuser_windws_name\id_ras
+```
+
+#### Pythonスクリプトの自動起動設定
+
+Raspbery Piの電源を起動した際に、自動起動するサービスとしてシステム管理デーモンコマンドに登録する方法がある。
+
+Python仮想環境を生成した後、以下設定をすることで起動可能となる。
+
+エディタで登録するサービスを作成
+```sh
+sudo vi /etc/systemd/system/space_balloon.service
+```
+
+ファイルの内容
+```sh
+[Unit]
+Description=Run space_balloon Python script in venv at boot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root
+ExecStart=<Python仮想環境へのパス>/bin/python \
+                                <スクリプトへのパス>/space_balloon.py \
+                                --mode 0           \
+                                --bme280 \
+                                --bme280_addr 0x76 \
+                                --bme280_i2cbus 5 \
+                                --icm20948 \
+                                --icm20948_addr 0x68 \
+                                --icm20948_i2cbus 1 \
+                                --gps \
+                                --gps_interval 5 \
+                                --bme280_interval 5 \
+                                --framerate 60 \
+                                --framebuffer 50 \
+                                --width 1980 \
+                                --height 1080 \
+                                --csvbuffer 614400 \
+                                --csv_output_dir ./output \
+                                --movie_output_dir ./output
+Restart=on-failure
+
+[Install]
+```
+
+登録したサービスの再読み込み。
+```sh
+sudo systemctl daemon-reload
+```
+
+サービスの有効化は以下コマンドで確認できる。
+これにより、Raspberry Pi起動時に自動起動する。
+```sh
+sudo systemctl enable space_balloon.service
+```
+
+サービスの実行は以下コマンドで確認できる。
+```sh
+sudo systemctl start space_balloon.service
+```
+
+サービスの実行ログの確認は以下コマンドで確認できる。
+```sh
+systemctl status space_balloon.service
+```
+
+Pythonスクリプトを含めた実行の確認は以下コマンドで確認できる。
+```sh
+journalctl -u  space_balloon.service -f
+```
+
+サービスの実行は停止は以下コマンドで確認できる。
+```sh
+sudo systemctl stop space_balloon.service
+```
+
+サービスの無効化は以下コマンドで確認できる。
+これにより、Raspberry Pi起動時の自動起動を停止する。
+```sh
+sudo systemctl disable space_balloon.service
 ```
 
 ### Raspberry Pi OSの準備
