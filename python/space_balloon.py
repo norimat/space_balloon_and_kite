@@ -289,6 +289,7 @@ class SensorWrapper:
             self.__analyzerDic["mpu6050_en"]          = self.__mpu6050_en
             self.__analyzerDic["icm20948_en"]         = self.__icm20948_en
             self.__analyzerDic["powermonitor_en"]     = self.__powermonitor_en
+            self.__analyzerDic["framerate"]           = self.__framerate
             self.__analyzerDic["input_dir"]           =         args.input_dir
             self.__analyzerDic["frame_sync_en"]       = int   ( args.frame_sync         )
             self.__analyzerDic["mp4_en"]              = int   ( args.mp4                )
@@ -1144,7 +1145,7 @@ class SensorAnalyzerImpl:
 
             if os.path.isfile( self.__parameterDic["input_dir"] + "/" + "movie.csv" ):
                 # 計測時にデータが途中で欠落した場合は、直前のデータを複製する
-                dataFrame     = pandas.read_csv( self.__parameterDic["input_dir"] + "/" + "movie.csv" )
+                dataFrame = pandas.read_csv( self.__parameterDic["input_dir"] + "/" + "movie.csv" )
                 dataFrame = dataFrame.replace("", pandas.NA)
                 dataFrame = dataFrame.ffill()
                 if self.__parameterDic["gps_en"] :
@@ -1835,16 +1836,20 @@ class MovieAnalyzerImpl:
             if movieFileName is not None:
                 if self.__parameterDic["gpu_en"]:
                     print("[Info] Convert from H.264 to MP4 using GPU.")
-                    print("[Info] ffmpeg -hwaccel cuda -hwaccel_output_format cuda -c:v h264_cuvid -y -i " + movieFileName + " -c:v h264_nvenc -preset fast " + movieFileName + ".mp4" )
+                    print("[Info] ffmpeg -framerate " + str( self.__parameterDic["framerate"]) + " -hwaccel cuda -hwaccel_output_format cuda -c:v h264_cuvid -y -i " + movieFileName + " -c:v h264_nvenc -preset fast -r " + str( self.__parameterDic["framerate"]) + " " + movieFileName + ".mp4" )
                     subprocess.run(
-                        "ffmpeg -hwaccel cuda -hwaccel_output_format cuda -c:v h264_cuvid -y -i " + movieFileName + " -c:v h264_nvenc -preset fast " + movieFileName + ".mp4" ,
+                        "ffmpeg -framerate " + str( self.__parameterDic["framerate"]) +
+                        " -hwaccel cuda -hwaccel_output_format cuda -c:v h264_cuvid -y -i " + movieFileName +
+                        " -c:v h264_nvenc -preset fast -r " + str( self.__parameterDic["framerate"]) + " " + movieFileName + ".mp4" ,
                         shell=True , capture_output=True , text=True
                     )
                 else:
                     print("[Info] Convert from H.264 to MP4.")
-                    print("[Info] ffmpeg -y -i " + movieFileName + " -c copy " + movieFileName + ".mp4" )
+                    print("[Info] ffmpeg -y -framerate " + str( self.__parameterDic["framerate"]) + " -i " + movieFileName +
+                          " -c:v libx264 -preset fast -r " + str( self.__parameterDic["framerate"]) + " " + movieFileName + ".mp4" )
                     subprocess.run(
-                        "ffmpeg -y -i " + movieFileName + " -c copy " + movieFileName + ".mp4" ,
+                        "ffmpeg -y -framerate " + str( self.__parameterDic["framerate"]) + " -i " + movieFileName +
+                        " -c:v libx264 -preset fast -r " + str( self.__parameterDic["framerate"]) + " " + movieFileName + ".mp4" ,
                         shell=True , capture_output=True , text=True
                     )
             else:
@@ -1923,88 +1928,91 @@ class MovieAnalyzerImpl:
         start_unix_epoch_time = time.time()
         imgFiles = sorted(glob.glob('tmp/frame_*.jpg'))
         frame_index = 0
-        for imgFile in imgFiles:
-            image    = cv2.imread(imgFile)
-            text     =        "Date : " + str( dataFrame.iloc[frame_index]['current_time'] ) + "\n"
-            text     = text + "Framerate : " + str( framerate ) + "\n"
-            if ( self.__parameterDic["bme280_en"] ) :
-                text = text + "BME280 Altitude : "         + str( dataFrame.iloc[frame_index]['bme280_altitude']           ) + "\n"
-                text = text + "BME280 Temperature : "      + str( dataFrame.iloc[frame_index]['bme280_temperature']        ) + "\n"
-                text = text + "BME280 Pressure : "         + str( dataFrame.iloc[frame_index]['bme280_pressure']           ) + "\n"
-                text = text + "BME280 Humidly : "          + str( dataFrame.iloc[frame_index]['bme280_humidity']           ) + "\n"
-            if ( self.__parameterDic["mpu6050_en"] ):
-                text = text + "MPU6050 AX : "              + str( dataFrame.iloc[frame_index]['mpu6050_ax']                ) + "\n"
-                text = text + "MPU6050 AY : "              + str( dataFrame.iloc[frame_index]['mpu6050_ay']                ) + "\n"
-                text = text + "MPU6050 AZ : "              + str( dataFrame.iloc[frame_index]['mpu6050_az']                ) + "\n"
-                text = text + "MPU6050 GX : "              + str( dataFrame.iloc[frame_index]['mpu6050_gx']                ) + "\n"
-                text = text + "MPU6050 GY : "              + str( dataFrame.iloc[frame_index]['mpu6050_gy']                ) + "\n"
-                text = text + "MPU6050 GZ : "              + str( dataFrame.iloc[frame_index]['mpu6050_gz']                ) + "\n"
-            if ( self.__parameterDic["icm20948_en"] ):
-                text = text + "ICM20948 AX : "             + str( dataFrame.iloc[frame_index]['icm-20948_ax']              ) + "\n"
-                text = text + "ICM20948 AY : "             + str( dataFrame.iloc[frame_index]['icm-20948_ay']              ) + "\n"
-                text = text + "ICM20948 AZ : "             + str( dataFrame.iloc[frame_index]['icm-20948_az']              ) + "\n"
-                text = text + "ICM20948 GX : "             + str( dataFrame.iloc[frame_index]['icm-20948_gx']              ) + "\n"
-                text = text + "ICM20948 GY : "             + str( dataFrame.iloc[frame_index]['icm-20948_gy']              ) + "\n"
-                text = text + "ICM20948 GZ : "             + str( dataFrame.iloc[frame_index]['icm-20948_gz']              ) + "\n"
-                text = text + "ICM20948 MX : "             + str( dataFrame.iloc[frame_index]['icm-20948_mx']              ) + "\n"
-                text = text + "ICM20948 MY : "             + str( dataFrame.iloc[frame_index]['icm-20948_my']              ) + "\n"
-                text = text + "ICM20948 MZ : "             + str( dataFrame.iloc[frame_index]['icm-20948_mz']              ) + "\n"
-                text = text + "ICM20948 heading rad : "    + str( dataFrame.iloc[frame_index]['icm-20948_heading_rad']     ) + "\n"
-                text = text + "ICM20948 heading deg : "    + str( dataFrame.iloc[frame_index]['icm-20948_heading_deg']     ) + "\n"
-            if ( self.__parameterDic["gps_en"] ):
-                text = text + "GPS latitude : "            + str( dataFrame.iloc[frame_index]['ivk172_latitude']           ) + "\n"
-                text = text + "GPS longitude : "           + str( dataFrame.iloc[frame_index]['ivk172_longitude']          ) + "\n"
-                text = text + "GPS altitude : "            + str( dataFrame.iloc[frame_index]['ivk172_altitude']           ) + "\n"
-                text = text + "GPS altitude_unit : "       + str( dataFrame.iloc[frame_index]['ivk172_altitude_units']     ) + "\n"
-                text = text + "GPS num_sats : "            + str( dataFrame.iloc[frame_index]['ivk172_num_sats']           ) + "\n"
-                text = text + "GPS datestam : "            + str( dataFrame.iloc[frame_index]['ivk172_datestamp']           ) + "\n"
-                text = text + "GPS timestamp: "            + str( dataFrame.iloc[frame_index]['ivk172_timestamp']          ) + "\n"
-                text = text + "GPS spd over grnd : "       + str( dataFrame.iloc[frame_index]['ivk172_spd_over_grnd']      ) + "\n"
-                text = text + "GPS true course : "         + str( dataFrame.iloc[frame_index]['ivk172_true_course']        ) + "\n"
-                text = text + "GPS true track : "          + str( dataFrame.iloc[frame_index]['ivk172_true_track']         ) + "\n"
-                text = text + "GPS spd over grnd kmph : "  + str( dataFrame.iloc[frame_index]['ivk172_spd_over_grnd_kmph'] ) + "\n"
-                text = text + "GPS pdop : "                + str( dataFrame.iloc[frame_index]['ivk172_pdop']               ) + "\n"
-                text = text + "GPS hdop : "                + str( dataFrame.iloc[frame_index]['ivk172_hdop']               ) + "\n"
-                text = text + "GPS vdop : "                + str( dataFrame.iloc[frame_index]['ivk172_vdop']               ) + "\n"
-                text = text + "GPS num sv in veiw : "      + str( dataFrame.iloc[frame_index]['ivk172_num_sv_in_view']     ) + "\n"
-            if ( self.__parameterDic["powermonitor_en"] ):
-                text = text + "voltage : "                    + str( dataFrame.iloc[frame_index]['powermonitor_voltage']                     ) + "\n"
-                text = text + "throttled status : "           + str( dataFrame.iloc[frame_index]['powermonitor_throttled']            ) + "\n"
-                text = text + "CPU utilization(%) : "         + str( dataFrame.iloc[frame_index]['powermonitor_cpu']             ) + "\n"
-                text = text + "CPU Temperature(celsius) : "   + str( dataFrame.iloc[frame_index]['powermonitor_cpu_temperature_c']           ) + "\n"
-                text = text + "Memory usage(MB) : "           + str( dataFrame.iloc[frame_index]['powermonitor_mem_used_MB']             ) + "\n"
-                text = text + "Memory Capacity(MB) : "        + str( dataFrame.iloc[frame_index]['powermonitor_mem_total_MB']          ) + "\n"
-                text = text + "Free Memory Space(MB) : "      + str( dataFrame.iloc[frame_index]['powermonitor_mem_available_MB']        ) + "\n"
-                text = text + "Memory usage Percentage(%) : " + str( dataFrame.iloc[frame_index]['powermonitor_mem_percent_used']     ) + "\n"
-                text = text + "Disk usage(GB) : "             + str( dataFrame.iloc[frame_index]['powermonitor_disk_used_GB']               ) + "\n"
-                text = text + "Total Disk Capacity(GB) : "    + str( dataFrame.iloc[frame_index]['powermonitor_disk_total_GB']      ) + "\n"
-                text = text + "Aveilable Disk Space(GB) : "   + str( dataFrame.iloc[frame_index]['powermonitor_disk_free_GB']     ) + "\n"
-                text = text + "Disk utilization(%) : "        + str( dataFrame.iloc[frame_index]['powermonitor_disk_percent_used'] ) + "\n"
-            x , y       = 10 , 30
-            #font        = cv2.FONT_HERSHEY_SIMPLEX
-            font        = cv2.FONT_HERSHEY_PLAIN
-            font_scale  = 2.25
-            if ( self.__parameterDic["bme280_en"] ):
-                font_scale = font_scale - 0.25
-            if ( self.__parameterDic["mpu6050_en"] ):
-                font_scale = font_scale - 0.25
-            if ( self.__parameterDic["icm20948_en"] ):
-                font_scale = font_scale - 0.25
-            if ( self.__parameterDic["gps_en"] ):
-                font_scale = font_scale - 0.80
-            if ( self.__parameterDic["powermonitor_en"] ):
-                font_scale = font_scale - 0.25
-            color       = ( 0 , 255 , 0 )
-            thickness   = 1
-            line_height = 30
-            for i, line in enumerate(text.split('\n')):
-                y_pos = y + i * line_height
-                cv2.putText( image , line , (x, y_pos) , font , font_scale , color , thickness , cv2.LINE_AA )
-            cv2.imwrite( str(re.sub(r"frame_", "frame_opencv_", imgFile )) , image)
-            frame_index = frame_index + 1
-        end_unix_epoch_time = time.time()
-        total_time = end_unix_epoch_time - start_unix_epoch_time
-        print("[Info] The __add_sensor_frame function takes " + str(total_time) + " seconds to run.")
+        try:
+            for imgFile in imgFiles:
+                image    = cv2.imread(imgFile)
+                text     =        "Date : " + str( dataFrame.iloc[frame_index]['current_time'] ) + "\n"
+                text     = text + "Framerate : " + str( framerate ) + "\n"
+                if ( self.__parameterDic["bme280_en"] ) :
+                    text = text + "BME280 Altitude : "         + str( dataFrame.iloc[frame_index]['bme280_altitude']           ) + "\n"
+                    text = text + "BME280 Temperature : "      + str( dataFrame.iloc[frame_index]['bme280_temperature']        ) + "\n"
+                    text = text + "BME280 Pressure : "         + str( dataFrame.iloc[frame_index]['bme280_pressure']           ) + "\n"
+                    text = text + "BME280 Humidly : "          + str( dataFrame.iloc[frame_index]['bme280_humidity']           ) + "\n"
+                if ( self.__parameterDic["mpu6050_en"] ):
+                    text = text + "MPU6050 AX : "              + str( dataFrame.iloc[frame_index]['mpu6050_ax']                ) + "\n"
+                    text = text + "MPU6050 AY : "              + str( dataFrame.iloc[frame_index]['mpu6050_ay']                ) + "\n"
+                    text = text + "MPU6050 AZ : "              + str( dataFrame.iloc[frame_index]['mpu6050_az']                ) + "\n"
+                    text = text + "MPU6050 GX : "              + str( dataFrame.iloc[frame_index]['mpu6050_gx']                ) + "\n"
+                    text = text + "MPU6050 GY : "              + str( dataFrame.iloc[frame_index]['mpu6050_gy']                ) + "\n"
+                    text = text + "MPU6050 GZ : "              + str( dataFrame.iloc[frame_index]['mpu6050_gz']                ) + "\n"
+                if ( self.__parameterDic["icm20948_en"] ):
+                    text = text + "ICM20948 AX : "             + str( dataFrame.iloc[frame_index]['icm-20948_ax']              ) + "\n"
+                    text = text + "ICM20948 AY : "             + str( dataFrame.iloc[frame_index]['icm-20948_ay']              ) + "\n"
+                    text = text + "ICM20948 AZ : "             + str( dataFrame.iloc[frame_index]['icm-20948_az']              ) + "\n"
+                    text = text + "ICM20948 GX : "             + str( dataFrame.iloc[frame_index]['icm-20948_gx']              ) + "\n"
+                    text = text + "ICM20948 GY : "             + str( dataFrame.iloc[frame_index]['icm-20948_gy']              ) + "\n"
+                    text = text + "ICM20948 GZ : "             + str( dataFrame.iloc[frame_index]['icm-20948_gz']              ) + "\n"
+                    text = text + "ICM20948 MX : "             + str( dataFrame.iloc[frame_index]['icm-20948_mx']              ) + "\n"
+                    text = text + "ICM20948 MY : "             + str( dataFrame.iloc[frame_index]['icm-20948_my']              ) + "\n"
+                    text = text + "ICM20948 MZ : "             + str( dataFrame.iloc[frame_index]['icm-20948_mz']              ) + "\n"
+                    text = text + "ICM20948 heading rad : "    + str( dataFrame.iloc[frame_index]['icm-20948_heading_rad']     ) + "\n"
+                    text = text + "ICM20948 heading deg : "    + str( dataFrame.iloc[frame_index]['icm-20948_heading_deg']     ) + "\n"
+                if ( self.__parameterDic["gps_en"] ):
+                    text = text + "GPS latitude : "            + str( dataFrame.iloc[frame_index]['ivk172_latitude']           ) + "\n"
+                    text = text + "GPS longitude : "           + str( dataFrame.iloc[frame_index]['ivk172_longitude']          ) + "\n"
+                    text = text + "GPS altitude : "            + str( dataFrame.iloc[frame_index]['ivk172_altitude']           ) + "\n"
+                    text = text + "GPS altitude_unit : "       + str( dataFrame.iloc[frame_index]['ivk172_altitude_units']     ) + "\n"
+                    text = text + "GPS num_sats : "            + str( dataFrame.iloc[frame_index]['ivk172_num_sats']           ) + "\n"
+                    text = text + "GPS datestam : "            + str( dataFrame.iloc[frame_index]['ivk172_datestamp']           ) + "\n"
+                    text = text + "GPS timestamp: "            + str( dataFrame.iloc[frame_index]['ivk172_timestamp']          ) + "\n"
+                    text = text + "GPS spd over grnd : "       + str( dataFrame.iloc[frame_index]['ivk172_spd_over_grnd']      ) + "\n"
+                    text = text + "GPS true course : "         + str( dataFrame.iloc[frame_index]['ivk172_true_course']        ) + "\n"
+                    text = text + "GPS true track : "          + str( dataFrame.iloc[frame_index]['ivk172_true_track']         ) + "\n"
+                    text = text + "GPS spd over grnd kmph : "  + str( dataFrame.iloc[frame_index]['ivk172_spd_over_grnd_kmph'] ) + "\n"
+                    text = text + "GPS pdop : "                + str( dataFrame.iloc[frame_index]['ivk172_pdop']               ) + "\n"
+                    text = text + "GPS hdop : "                + str( dataFrame.iloc[frame_index]['ivk172_hdop']               ) + "\n"
+                    text = text + "GPS vdop : "                + str( dataFrame.iloc[frame_index]['ivk172_vdop']               ) + "\n"
+                    text = text + "GPS num sv in veiw : "      + str( dataFrame.iloc[frame_index]['ivk172_num_sv_in_view']     ) + "\n"
+                if ( self.__parameterDic["powermonitor_en"] ):
+                    text = text + "voltage : "                    + str( dataFrame.iloc[frame_index]['powermonitor_voltage']                     ) + "\n"
+                    text = text + "throttled status : "           + str( dataFrame.iloc[frame_index]['powermonitor_throttled']            ) + "\n"
+                    text = text + "CPU utilization(%) : "         + str( dataFrame.iloc[frame_index]['powermonitor_cpu']             ) + "\n"
+                    text = text + "CPU Temperature(celsius) : "   + str( dataFrame.iloc[frame_index]['powermonitor_cpu_temperature_c']           ) + "\n"
+                    text = text + "Memory usage(MB) : "           + str( dataFrame.iloc[frame_index]['powermonitor_mem_used_MB']             ) + "\n"
+                    text = text + "Memory Capacity(MB) : "        + str( dataFrame.iloc[frame_index]['powermonitor_mem_total_MB']          ) + "\n"
+                    text = text + "Free Memory Space(MB) : "      + str( dataFrame.iloc[frame_index]['powermonitor_mem_available_MB']        ) + "\n"
+                    text = text + "Memory usage Percentage(%) : " + str( dataFrame.iloc[frame_index]['powermonitor_mem_percent_used']     ) + "\n"
+                    text = text + "Disk usage(GB) : "             + str( dataFrame.iloc[frame_index]['powermonitor_disk_used_GB']               ) + "\n"
+                    text = text + "Total Disk Capacity(GB) : "    + str( dataFrame.iloc[frame_index]['powermonitor_disk_total_GB']      ) + "\n"
+                    text = text + "Aveilable Disk Space(GB) : "   + str( dataFrame.iloc[frame_index]['powermonitor_disk_free_GB']     ) + "\n"
+                    text = text + "Disk utilization(%) : "        + str( dataFrame.iloc[frame_index]['powermonitor_disk_percent_used'] ) + "\n"
+                x , y       = 10 , 30
+                #font        = cv2.FONT_HERSHEY_SIMPLEX
+                font        = cv2.FONT_HERSHEY_PLAIN
+                font_scale  = 2.25
+                if ( self.__parameterDic["bme280_en"] ):
+                    font_scale = font_scale - 0.25
+                if ( self.__parameterDic["mpu6050_en"] ):
+                    font_scale = font_scale - 0.25
+                if ( self.__parameterDic["icm20948_en"] ):
+                    font_scale = font_scale - 0.25
+                if ( self.__parameterDic["gps_en"] ):
+                    font_scale = font_scale - 0.80
+                if ( self.__parameterDic["powermonitor_en"] ):
+                    font_scale = font_scale - 0.25
+                color       = ( 0 , 255 , 0 )
+                thickness   = 1
+                line_height = 30
+                for i, line in enumerate(text.split('\n')):
+                    y_pos = y + i * line_height
+                    cv2.putText( image , line , (x, y_pos) , font , font_scale , color , thickness , cv2.LINE_AA )
+                cv2.imwrite( str(re.sub(r"frame_", "frame_opencv_", imgFile )) , image)
+                frame_index = frame_index + 1
+            end_unix_epoch_time = time.time()
+            total_time = end_unix_epoch_time - start_unix_epoch_time
+            print("[Info] The __add_sensor_frame function takes " + str(total_time) + " seconds to run.")
+        except:
+            pass # ignore
 
     ############################################################################
     def __movie_gen( self , movieFileName , dataFrame ):
@@ -2013,11 +2021,9 @@ class MovieAnalyzerImpl:
         os.makedirs  ( './tmp' , exist_ok     =True ) # make tmp directory
 
         self.__separation_h264_to_jpeg( movieFileName )
-        cap       = cv2.VideoCapture( movieFileName )
-        framerate = cap.get( cv2.CAP_PROP_FPS )
 
-        self.__add_sensor_frame   ( dataFrame , framerate )
-        self.__merge_jpeg_to_h264 ( movieFileName + ".sensor.h264" , framerate )
+        self.__add_sensor_frame   ( dataFrame ,  self.__parameterDic["framerate"] )
+        self.__merge_jpeg_to_h264 ( movieFileName + ".sensor.h264" , self.__parameterDic["framerate"] )
         self.__convert_h264_to_mp4( movieFileName + ".sensor.h264" )
         shutil.rmtree( './tmp' , ignore_errors=True )
 
