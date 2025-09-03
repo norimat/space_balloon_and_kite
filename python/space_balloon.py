@@ -1164,7 +1164,13 @@ class SensorAnalyzerImpl:
                     if self.__parameterDic["mp4_en"]:
                         processList.append(
                             multiprocessing.Process(
-                                target = mai.doMovieAnalyzerImpl(
+                                # target = mai.doMovieAnalyzerImpl(
+                                #     False ,
+                                #     self.__parameterDic["input_dir"] + "/" + "movie.h264" ,
+                                #     None
+                                # )
+                                target = mai.doMovieAnalyzerImpl ,
+                                args   = (
                                     False ,
                                     self.__parameterDic["input_dir"] + "/" + "movie.h264" ,
                                     None
@@ -1186,7 +1192,13 @@ class SensorAnalyzerImpl:
                             iai.doI2CAnalyzerImpl()
                             processList.append(
                                 multiprocessing.Process(
-                                    target= mai.doMovieAnalyzerImpl(
+                                    # target= mai.doMovieAnalyzerImpl(
+                                    #     self.__parameterDic["frame_sync_en"] ,
+                                    #     self.__parameterDic["input_dir"] + "/" + "movie.h264" ,
+                                    #     iai.getDataFrame()
+                                    # )
+                                    target = mai.doMovieAnalyzerImpl ,
+                                    args   = (
                                         self.__parameterDic["frame_sync_en"] ,
                                         self.__parameterDic["input_dir"] + "/" + "movie.h264" ,
                                         iai.getDataFrame()
