@@ -2474,6 +2474,7 @@ ExecStart=<Python仮想環境へのパス>/bin/python \
 Restart=on-failure
 
 [Install]
+WantedBy=multi-user.target
 ```
 
 登録したサービスの再読み込み。
