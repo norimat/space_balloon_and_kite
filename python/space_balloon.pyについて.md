@@ -16,6 +16,7 @@
 | 2025/07/06 | 「[1-3. 入出力](#1-3-入出力)」について出力にICM-20948キャリブレーション結果を追加<br>「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　--modeにICM-20948キャリブレーションモード:2を追加<br>　`--calib_json`オプションを追加<br>「[1-4-1.センサー取得モード](#1-4-1-センサー取得モード)」について取得するデータをセンサーレジスタデータに変更<br>「[1-4-1-1. 動画取得](#1-4-1-1-動画取得)」について動画取得をpicmera2に変更した内容に修正<br>「[1-4-1-2. BME280計測データ取得](#1-4-1-2-BME280計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-3. MPU6050計測データ取得](#1-4-1-3-MPU6050計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-4. MPU9250計測データ取得](#1-4-1-4-MPU9250計測データ取得)」について削除<br>「[1-4-1-4. ICM-20948計測データ取得](#1-4-1-4-ICM-20948計測データ取得)」について<br>　実行時間elapsed_time、計測開始時刻start_epoch_timeを削除<br>　計測データをセンサーレジスタ値に修正<br>「[1-4-1-5. IVK172 G-Mouse USB GPS計測データ取得](#1-4-1-5-IVK172 G-Mouse USB GPS計測データ取得)」について<br>　データ更新時間が長いためフレーム同期取得はせず、経度、緯度および高度を優先しないように修正<br>「[1-4-1-6. PowerMonitorデータ取得](#1-4-1-6-PowerMonitorデータ取得)」について追加<br>「[1-4-2.センサーデータ解析モード](#1-4-2-センサーデータ解析モード)」について<br>　ICM-20948の内容追加<br>　GPSデータ追加<br>　PowerMonitorの内容追加<br>「[1-4-2-1. 高度の算出](#1-4-2-1-高度の算出)」について削除<br>「[1-4-2-1. 動画データとセンサーデータの同期](#1-4-2-1-動画データとセンサーデータの同期)」について内容修正<br>「[1-4-2-2. BME280から取得したデータのグラフ作成機能](#1-4-2-2-BME280から取得したデータのグラフ作成機能)」について削除<br>「[1-4-2-3. MPU6050から取得したデータのグラフ作成機能](#1-4-2-3-MPU6050から取得したデータのグラフ作成機能)」について削除<br>「[1-4-2-4. MPU9250から取得したデータのグラフ作成機能](#1-4-2-4-MPU9250から取得したデータのグラフ作成機能)」について削除<br>「[1-4-3.ICM-20948キャリブレーションモード](#1-4-3-ICM-20948キャリブレーションモード)」について追加<br>「[2. 動作環境](#2-動作環境)」についてBulleseyeからBookwarmに修正<br>「[3. 実行方法](#3-実行方法)」について<br>　オプション構成変更<br>　説明修正<br>　*ICM-20948キャリブレーションモード*の説明追加<br>「[4-2. Pythonコードの説明](#4-2-Pythonコードの説明)」について説明とコード修正<br>「[6-2. Pythonコードの説明](#6-2-Pythonコードの説明)」について説明とコード修正<br>「[7. MPU9250を用いた加速度、角速度および地磁気の取得について](#7-MPU9250を用いた加速度、角速度および地磁気の取得について)」について削除<br>「[7. ICM-20948を用いた加速度、角速度および地磁気の取得について](#7-ICM-20948を用いた加速度、角速度および地磁気の取得について)」について修正<br>「[8. PowerMonitorを用いた計測データの取得について](#8-PowerMonitorを用いた計測データの取得について)」について追加<br>「[9. IVK172 G-Mouse USB GPSを用いた計測データの取得について](#9-IVK172 G-Mouse USB GPSを用いた計測データの取得について)」について修正<br>「[付録](#付録)」について<br>　「[Raspberry Pi OSの準備](#Raspberry-Pi-OSの準備)」<br>　Bookwarmを追加<br>　「[Python実行環境準備](#Python実行環境準備)」<br>　MPU9250の記述削除<br>　gpac削除<br> |
 | 2025/07/28 | 「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　フレームバッファ、csvバッファおよび出力先個別設定オプションの`--framebuffer`、`--csvbuffer`、`--movie_output_dir`および`--csv_output_dir`を追加<br> 「[3. 実行方法](#3-実行方法)」について<br>　実行オプション変更に伴い修正  |
 | 2025/08/31 | 「[1-3-1. 実行オプション](#1-3-1-実行オプション)」について<br>　センサーデータ解析モードでも解析対象を指定するため以下オプションを両方に指定できるように追加　<br>　`--bme280`　<br>　`--mpu6050`　<br>　`--icm20948`　<br>　`--gps`　<br>　`--powermonitor`　<br>　`--framerate`　<br> ICM-20948およびBME280のキャリブレーションjsonを出力する先のディレクトリ指定オプションを追加<br>　`--json_output_dir`<br> センサーデータ解析モード時にICM-20948およびBME280のキャリブレーションjsonを指定するオプション追加<br>　`--icm20948_calib_json`　<br>　`--bme280_calib_json　<br>「[付録](#付録)」について<br>　「[Pythonスクリプトの自動起動設定](#Pythonスクリプトの自動起動設定)」を追加<br> 「[3. 実行方法](#3-実行方法)」について<br>　実行オプション変更に伴い既存実行方法修正<br>　BME280キャリブレーション実行について追記 <br>「[1-4-4.BME280キャリブレーションモード](#1-4-4bme280キャリブレーションモード)」について <br>　BME280のキャリブレーション時の出力jsonファイル追加　  |
+| 2025/09/03 | 「[付録](#付録)」について<br>　「[WSL上でRaspberry PiのmicroSDからデータを取り出す方法](#wsl上でraspberry-piのmicrosdからデータを取り出す方法)」を追加  |
 
 
 ## 1. space_balloon.py概要
@@ -2473,6 +2474,7 @@ ExecStart=<Python仮想環境へのパス>/bin/python \
 Restart=on-failure
 
 [Install]
+WantedBy=multi-user.target
 ```
 
 登録したサービスの再読み込み。
@@ -2975,6 +2977,118 @@ OKにカーソルをあわせEnterキーを押す。
 YesにカーソルをあわせEnterキーを押す。
 
 <img src="fig/How_to_Install_ubuntu_restricted_extras_Part2.svg" width= "500px" >
+
+### WSL上でRaspberry PiのmicroSDからデータを取り出す方法
+
+Raspberry Piからデータを取り出したい場合、ネットワーク経由であればSambaやSSHを用いて取り出すことができる。
+しかし、ネットワークトラブルなどにより取り出せない場合、Raspberry Pi向けのディスプレイモニターなどがないとネットワークトラブルの改善が難しく、データを取得できないことがある。このため、WindowsPCでWSLを用いてRaspberry PiインストールmicroSDからデータを取り出す方法を説明する。
+
+- 前提条件
+  - WSL上にUbuntuなどのLinux OSを導入済み
+  - WSLはWSL2を使用する
+  - microSDカードをWindowsPCに接続できるようにカードリーダーを使用する
+
+#### WindowsPCでの事前準備
+
+①WindowsPC上でUSBIPDをインストールする。
+
+②[USBIPDのリンク](https://github.com/dorssel/usbipd-win/releases)から「usbipd-win_<バージョン>_x64.msi」をダウンロードする。
+
+③ダウンロード完了後、「usbipd-win_<バージョン>_x64.msi」をダブルクリックし、インストールする。
+
+④microSDをWindowsPCに物理的にカードリーダーで接続する。(この際、エクスプローラーは閉じておく。)
+
+⑤Windows PowerShellを管理者権限で実行する。
+
+⑥WSL上で動作しているOSを停止しWSLを更新する。
+```sh
+> wsl --shutdown
+> wsl --update
+```
+
+⑦WSL上へmicroSDをマウントする。(以下のコマンド結果例だと、BUSIDが3-1がmicroSDとなる。)
+```sh
+> usbipd list
+Connected:
+BUSID  VID:PID    DEVICE                                                        STATE
+1-4    413c:302d  USB 入力デバイス                                              Not shared
+1-6    0bda:5590  Camera AI Effect Opt-out, Camera DFU Device                   Not shared
+1-10   0489:e139  MediaTek Bluetooth Adapter                                    Not shared
+3-1    05e3:0751  USB 大容量記憶装置                                            Shared
+
+Persisted:
+GUID                                  DEVICE
+```
+⑧microSDをUSBIPDに登録する。(busidは3-1とする。)
+```sh
+> usbipd bind --busid <busid>
+```
+
+⑨別Windows PowerShellを起動し、WSLのUbuntuを起動する。
+```sh
+> wsl -d Ubuntu
+```
+
+⑩管理者権限で起動しているWindows PowerShellでUbuntuに対してmicroSDをマウントする。
+```sh
+> usbipd attach --wsl --busid <busid>
+```
+
+#### WSL上のUbuntuでの操作(Raspberry Pi OSのファイルを参照)
+
+①Ubuntu起動後、デバイスを確認。(microSDはsde/sde2にRaspberry Pi OSのデータが入っている。)
+```sh
+$ lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+sda      8:0    0 388.4M  1 disk
+sdb      8:16   0   186M  1 disk
+sdc      8:32   0     2G  0 disk [SWAP]
+sdd      8:48   0     1T  0 disk /mnt/wslg/distro
+                                 /
+sde      8:64   1 119.1G  0 disk
+├─sde1   8:65   1   256M  0 part
+└─sde2   8:66   1 118.8G  0 part
+```
+
+②UbuntuにmicroSDをマウントする。
+```sh
+$ sudo mkdir /mnt/dev
+$ sudo mount /dev/sde2 /mnt/dev
+```
+
+③/mnt/dev以下にRaspberry Pi OSのルートフォルダを参照できる。
+```sh
+$ ls -l /mnt/dev
+合計 92
+lrwxrwxrwx   1 root root     7 10月 22  2024 bin -> usr/bin
+drwxr-xr-x   2 root root  4096 10月 22  2024 boot
+drwxr-xr-x   4 root root  4096 10月 22  2024 dev
+drwxr-xr-x 125 root root 12288  4月 23 22:25 etc
+drwxr-xr-x   3 root root  4096  3月  6 23:07 home
+lrwxrwxrwx   1 root root     7 10月 22  2024 lib -> usr/lib
+drwx------   2 root root 16384 10月 22  2024 lost+found
+drwxr-xr-x   2 root root  4096 10月 22  2024 media
+drwxr-xr-x   2 root root  4096 10月 22  2024 mnt
+drwxr-xr-x   4 root root  4096 10月 22  2024 opt
+drwxr-xr-x   2 root root  4096 10月 22  2024 proc
+drwx------   7 root root  4096  4月  5 01:28 root
+drwxr-xr-x   4 root root  4096 10月 22  2024 run
+lrwxrwxrwx   1 root root     8 10月 22  2024 sbin -> usr/sbin
+drwxr-xr-x   2 root root  4096 10月 22  2024 srv
+drwxr-xr-x   2 root root  4096  9月  6  2024 sys
+drwxrwxrwt  12 root root 12288  5月 26 21:19 tmp
+drwxr-xr-x  11 root root  4096 10月 22  2024 usr
+drwxr-xr-x  11 root root  4096 10月 22  2024 var
+```
+
+④ファイルをコピーや編集する。
+```sh
+# Raspberry Pi OSがBookwormでネットワーク設定を修正したい場合
+$ sudo vi /mnt/dev/etc/NetworkManager/system-connections/SSID名.nmconnection
+
+# ユーザ以下に配置したセンサー計測データをコピーしたい場合
+$ sudo cp -r /mnt/dev/home/ユーザ名/計測データディレクトリ コピー先
+```
 
 ## 参考情報
 - Raspberry Pi OS
